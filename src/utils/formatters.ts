@@ -81,6 +81,21 @@ export function formatAccessKey(key: string): string {
   return key.replace(/(\d{4})/g, "$1 ").trim();
 }
 
+export function formatTime(isoDate: string): string {
+  if (!isoDate) return "";
+  try {
+    const date = new Date(isoDate);
+    return date.toLocaleTimeString("pt-BR");
+  } catch {
+    return isoDate;
+  }
+}
+
+export function formatNFNumber(num: string): string {
+  const digits = num.replace(/\D/g, "");
+  return digits.replace(/(\d)(?=(\d{3})+$)/g, "$1.");
+}
+
 export const MODAL_FRETE: Record<string, string> = {
   "0": "0 - Contratação do Frete por conta do Remetente (CIF)",
   "1": "1 - Contratação do Frete por conta do Destinatário (FOB)",
