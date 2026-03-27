@@ -2,13 +2,16 @@ import { useDocumentStore } from "@/store/documentStore";
 import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Copy, Check, Download, Loader2 } from "lucide-react";
 import { getDocumentMeta } from "@/utils/documentMeta";
+import { useState } from "react";
 
 export function DocumentViewer() {
   const doc = useDocumentStore((s) => s.currentDocument);
   const loading = useDocumentStore((s) => s.loading);
   const error = useDocumentStore((s) => s.error);
+  const currentXml = useDocumentStore((s) => s.currentXml);
+  const [copied, setCopied] = useState(false);
 
   if (loading) {
     return (
@@ -48,6 +51,35 @@ export function DocumentViewer() {
     documentName = `NFS-e nº ${numero}`;
   }
 
+  let chave = "";
+  if (doc.documentType === "nfe" && doc.nfe) {
+    chave = doc.nfe.infNFe.id.replace(/^NFe/, "");
+  } else if (doc.documentType === "cte" && doc.cte) {
+    chave = doc.cte.infCte.id.replace(/^CTe/, "");
+  } else if (doc.documentType === "nfse" && doc.nfse) {
+    chave = doc.nfse.nfse.infNfse.codigoVerificacao;
+  }
+
+  const handleCopyKey = async () => {
+    if (!chave) return;
+    await navigator.clipboard.writeText(chave);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadXml = () => {
+    if (!currentXml) return;
+    const blob = new Blob([currentXml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${documentName.replace(/[^a-zA-Z0-9áéíóúãõçÁÉÍÓÚÃÕÇ _\-–—]/g, "_")}.xml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   let viewer = null;
   switch (doc.documentType) {
     case "nfe":
@@ -79,6 +111,28 @@ export function DocumentViewer() {
         >
           {documentMeta.label}
         </span>
+
+        {chave && (
+          <button
+            onClick={handleCopyKey}
+            className="ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
+            title={`Copiar chave: ${chave}`}
+          >
+            {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+            {copied ? "Copiado!" : "Copiar chave"}
+          </button>
+        )}
+
+        {currentXml && (
+          <button
+            onClick={handleDownloadXml}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors ${!chave ? "ml-auto" : ""}`}
+            title="Baixar XML"
+          >
+            <Download size={13} />
+            Baixar XML
+          </button>
+        )}
       </div>
 
       <div id="document-viewer-content">{viewer}</div>
