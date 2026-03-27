@@ -296,6 +296,11 @@ export function DANFEViewer({ nfe }: Props) {
   const measureRowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   const [pageChunks, setPageChunks] = useState<number[][]>([det.map((_, index) => index)]);
 
+  useEffect(() => {
+    measureRowRefs.current = [];
+    setPageChunks([det.map((_, index) => index)]);
+  }, [det]);
+
   const receiptBlock = (
     <>
       <div className="border border-black dark:border-gray-400">
@@ -516,7 +521,12 @@ export function DANFEViewer({ nfe }: Props) {
     setPageChunks(chunkProducts(rowHeights, firstPageAvailable, continuationPageAvailable));
   }, [det, emit, ide, protNFe, accessKey, dest, total, transp, cobr, infAdic]);
 
-  const productPages = pageChunks.map((chunk) => chunk.map((index) => det[index]));
+  const productPages = pageChunks
+    .map((chunk) => chunk
+      .filter((index) => index >= 0 && index < det.length)
+      .map((index) => det[index])
+      .filter((item): item is Nfe["infNFe"]["det"][number] => Boolean(item)))
+    .filter((chunk) => chunk.length > 0);
   const firstPageProducts = productPages[0] ?? det;
   const continuationProductPages = productPages.slice(1);
 
