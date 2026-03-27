@@ -141,18 +141,20 @@ export function Sidebar() {
                 <button
                   onClick={() => loadFile(recentFile.id)}
                   onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
-                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 min-w-0"
+                  className="w-full justify-between text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 min-w-0"
                   title={recentFile.label}
                 >
-                  <span className="w-8 shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <File size={14} className="shrink-0 text-gray-400 dark:text-gray-500" />
+                    <span className="truncate">
+                      {recentFile.label}
+                    </span>
+                  </span>
+                  <span className="w-8  shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500 text-right">
                     {formatTimeSince(
                       recentFile.lastOpenedAt,
                       recentFile.id === currentFilePath ? Date.now() : now,
                     )}
-                  </span>
-                  <File size={14} className="shrink-0 text-gray-400 dark:text-gray-500" />
-                  <span className="truncate">
-                    {recentFile.label}
                   </span>
                 </button>
               </li>
