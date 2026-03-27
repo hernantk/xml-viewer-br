@@ -243,7 +243,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     try {
       let content = xmlContent;
-      if (!content) {
+      if (content === undefined) {
         const cachedContent = getRecentFileCache()[fileId];
         if (cachedContent) {
           content = cachedContent;
@@ -385,6 +385,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     let loaded = 0;
     let skipped = 0;
+    let firstErrorMessage: string | null = null;
     let lastDoc: ParsedDocument | null = null;
     let lastXml: string | null = null;
     let lastFilePath: string | null = null;
@@ -405,8 +406,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         lastXml = file.content;
         lastFilePath = file.id;
         loaded++;
-      } catch {
+      } catch (error) {
         skipped++;
+        if (!firstErrorMessage && error instanceof Error) {
+          firstErrorMessage = error.message;
+        }
       }
     }
 
@@ -418,7 +422,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       currentFilePath: lastFilePath,
       recentFiles,
       loading: false,
-      error: skipped > 0 ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.` : null,
+      error:
+        loaded === 0 && firstErrorMessage
+          ? firstErrorMessage
+          : skipped > 0
+            ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
+            : null,
       validation: null,
     });
 

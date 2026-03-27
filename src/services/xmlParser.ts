@@ -17,14 +17,20 @@ function getElAll(parent: Element, tagName: string): Element[] {
 }
 
 export function detectDocumentType(xml: string): DocumentType {
+  const normalizedXml = xml.replace(/^\uFEFF/, "").trim();
+  if (normalizedXml.length === 0) {
+    throw new Error("Arquivo XML vazio.");
+  }
+  const lowerXml = normalizedXml.toLowerCase();
+
   // CT-e must be checked before NF-e because CT-e XMLs can contain <infNFe> references
-  if (xml.includes("cteProc") || xml.includes("<CTe") || xml.includes("infCte") || xml.includes("portalfiscal.inf.br/cte")) {
+  if (lowerXml.includes("cteproc") || lowerXml.includes("<cte") || lowerXml.includes("infcte") || lowerXml.includes("portalfiscal.inf.br/cte")) {
     return "cte";
   }
-  if (xml.includes("nfeProc") || xml.includes("infNFe") || xml.includes("portalfiscal.inf.br/nfe")) {
+  if (lowerXml.includes("nfeproc") || lowerXml.includes("<nfe") || lowerXml.includes("infnfe") || lowerXml.includes("portalfiscal.inf.br/nfe")) {
     return "nfe";
   }
-  if (xml.includes("CompNfse") || xml.includes("InfNfse") || xml.includes("InfNFSe") || xml.includes("<NFSe") || xml.includes("abrasf")) {
+  if (lowerXml.includes("compnfse") || lowerXml.includes("infnfse") || lowerXml.includes("<nfse") || lowerXml.includes("abrasf")) {
     return "nfse";
   }
   throw new Error("Tipo de documento XML não reconhecido. Suportados: NF-e, CT-e, NFS-e.");

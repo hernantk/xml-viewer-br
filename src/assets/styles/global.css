@@ -64,6 +64,20 @@
   margin: 0;
 }
 
+.danfe-page {
+  break-after: page;
+  page-break-after: always;
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+  overflow: hidden;
+  min-height: 297mm;
+}
+
+.danfe-page:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
 @media print {
   body {
     background: white !important;

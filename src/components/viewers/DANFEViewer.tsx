@@ -543,11 +543,11 @@ export function DANFEViewer({ nfe }: Props) {
   return (
     <div className="max-w-[210mm] mx-auto my-4 bg-white dark:bg-gray-900 shadow-lg print:shadow-none print:my-0">
       <div className="text-black dark:text-gray-100">
-        <div className="p-4 print:hidden pdf-hidden">
+        <div className="hidden pdf-hidden">
           {defaultContent}
         </div>
 
-        <div className="hidden print:block pdf-only">
+        <div className="pdf-only">
           <section className="danfe-page p-4">
             {receiptBlock}
             {headerBlock}

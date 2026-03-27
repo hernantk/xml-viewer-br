@@ -78,69 +78,90 @@ export async function generatePdfFromElement(
   document.body.appendChild(clone);
 
   try {
-    const canvas = await html2canvas(clone, {
-      scale: CAPTURE_SCALE,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      windowWidth: 794,
-    });
-
-    document.body.removeChild(clone);
-
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
+    const pagedSections = Array.from(
+      clone.querySelectorAll<HTMLElement>(".danfe-page"),
+    );
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    const canvasWidthPx = canvas.width;
-    const canvasHeightPx = canvas.height;
-    const ratio = CONTENT_WIDTH_MM / (canvasWidthPx / CAPTURE_SCALE);
-    const totalHeightMM = (canvasHeightPx / CAPTURE_SCALE) * ratio;
-
-    if (totalHeightMM <= CONTENT_HEIGHT_MM) {
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        MARGIN_MM,
-        MARGIN_MM,
-        CONTENT_WIDTH_MM,
-        totalHeightMM,
-      );
-    } else {
-      const pageHeightPx = (CONTENT_HEIGHT_MM / ratio) * CAPTURE_SCALE;
-      const totalPages = Math.ceil(canvasHeightPx / pageHeightPx);
-
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
+    if (pagedSections.length > 0) {
+      for (let index = 0; index < pagedSections.length; index++) {
+        if (index > 0) {
           pdf.addPage();
         }
-
-        const sliceY = page * pageHeightPx;
-        const sliceHeight = Math.min(pageHeightPx, canvasHeightPx - sliceY);
-        const pageCanvas = createCanvasSlice(canvas, sliceY, sliceHeight);
-        const pageContentHeight = (sliceHeight / CAPTURE_SCALE) * ratio;
-
-        pdf.addImage(
-          pageCanvas.toDataURL("image/jpeg", 0.95),
-          "JPEG",
-          MARGIN_MM,
-          MARGIN_MM,
-          CONTENT_WIDTH_MM,
-          pageContentHeight,
-        );
+        const pageCanvas = await html2canvas(pagedSections[index], {
+          scale: CAPTURE_SCALE,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: 794,
+        });
+        addCanvasToPdf(pdf, pageCanvas);
       }
+    } else {
+      const canvas = await html2canvas(clone, {
+        scale: CAPTURE_SCALE,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 794,
+      });
+      addCanvasToPdf(pdf, canvas);
     }
 
     const arrayBuffer = pdf.output("arraybuffer");
     return new Uint8Array(arrayBuffer);
   } catch (err) {
-    if (clone.parentNode) {
-      document.body.removeChild(clone);
-    }
+    if (clone.parentNode) document.body.removeChild(clone);
     throw err;
+  } finally {
+    if (clone.parentNode) document.body.removeChild(clone);
+  }
+}
+
+function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  const canvasWidthPx = canvas.width;
+  const canvasHeightPx = canvas.height;
+  const ratio = CONTENT_WIDTH_MM / (canvasWidthPx / CAPTURE_SCALE);
+  const totalHeightMM = (canvasHeightPx / CAPTURE_SCALE) * ratio;
+
+  if (totalHeightMM <= CONTENT_HEIGHT_MM) {
+    pdf.addImage(
+      imgData,
+      "JPEG",
+      MARGIN_MM,
+      MARGIN_MM,
+      CONTENT_WIDTH_MM,
+      totalHeightMM,
+    );
+    return;
+  }
+
+  const pageHeightPx = (CONTENT_HEIGHT_MM / ratio) * CAPTURE_SCALE;
+  const totalPages = Math.ceil(canvasHeightPx / pageHeightPx);
+
+  for (let page = 0; page < totalPages; page++) {
+    if (page > 0) {
+      pdf.addPage();
+    }
+
+    const sliceY = page * pageHeightPx;
+    const sliceHeight = Math.min(pageHeightPx, canvasHeightPx - sliceY);
+    const pageCanvas = createCanvasSlice(canvas, sliceY, sliceHeight);
+    const pageContentHeight = (sliceHeight / CAPTURE_SCALE) * ratio;
+
+    pdf.addImage(
+      pageCanvas.toDataURL("image/jpeg", 0.95),
+      "JPEG",
+      MARGIN_MM,
+      MARGIN_MM,
+      CONTENT_WIDTH_MM,
+      pageContentHeight,
+    );
   }
 }
 
