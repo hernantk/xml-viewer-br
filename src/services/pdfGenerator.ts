@@ -10,13 +10,13 @@ async function loadDeps() {
 // A4 dimensions in mm
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-const MARGIN_MM = 5;
+const MARGIN_MM = 0;
 
 const CONTENT_WIDTH_MM = A4_WIDTH_MM - MARGIN_MM * 2;
 const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - MARGIN_MM * 2;
 
 // Scale for high-quality capture
-const CAPTURE_SCALE = 2;
+const CAPTURE_SCALE = 3;
 
 export async function generatePdfFromElement(
   element: HTMLElement,
@@ -36,6 +36,15 @@ export async function generatePdfFromElement(
   clone.style.top = "0";
   clone.style.padding = "0";
   clone.style.margin = "0";
+  clone.style.lineHeight = "1.8"; // Aumenta o espaçamento entre linhas
+
+  // Força o line-height e padding vertical em todos os elementos relevantes
+  const allElements = clone.querySelectorAll('tr, td, th, div, span, p, li');
+  allElements.forEach((el) => {
+    if (el instanceof HTMLElement) {
+      el.style.lineHeight = '1.8em';
+    }
+  });
 
   // Remove dark mode classes from clone
   removeDarkClasses(clone);
