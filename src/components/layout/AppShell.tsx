@@ -9,6 +9,8 @@ import { useDocumentStore } from "@/store/documentStore";
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
+  const loading = useDocumentStore((s) => s.loading);
+  const error = useDocumentStore((s) => s.error);
 
   return (
     <FileDropZone>
@@ -20,7 +22,11 @@ export function AppShell() {
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           />
           <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-800">
-            {currentDocument ? <DocumentViewer /> : <EmptyState />}
+            {currentDocument || loading || error ? (
+              <DocumentViewer />
+            ) : (
+              <EmptyState />
+            )}
           </main>
         </div>
       </div>
