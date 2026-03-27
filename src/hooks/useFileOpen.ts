@@ -4,6 +4,7 @@ import { createMemoryFileId, useDocumentStore } from "@/store/documentStore";
 export function useFileOpen() {
   const loadFile = useDocumentStore((s) => s.loadFile);
   const loadMultipleFiles = useDocumentStore((s) => s.loadMultipleFiles);
+  const loadPaths = useDocumentStore((s) => s.loadPaths);
   const [importNotice, setImportNotice] = useState<string | null>(null);
 
   const openFile = useCallback(async () => {
@@ -19,25 +20,7 @@ export function useFileOpen() {
 
       const paths = Array.isArray(selected) ? selected : [selected];
       if (paths.length === 0) return;
-
-      if (paths.length === 1) {
-        const { readTextFile } = await import("@tauri-apps/plugin-fs");
-        const content = await readTextFile(paths[0]);
-        loadFile(paths[0], content);
-        return;
-      }
-
-      const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      const files: { id: string; content: string }[] = [];
-      for (const p of paths) {
-        try {
-          const content = await readTextFile(p);
-          files.push({ id: p, content });
-        } catch {
-          /* skip unreadable */
-        }
-      }
-      const result = await loadMultipleFiles(files);
+      const result = await loadPaths(paths);
       if (result.limitIncreased) {
         setImportNotice(
           `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
@@ -85,7 +68,7 @@ export function useFileOpen() {
       };
       input.click();
     }
-  }, [loadFile, loadMultipleFiles]);
+  }, [loadFile, loadMultipleFiles, loadPaths]);
 
   return { openFile, importNotice };
 }

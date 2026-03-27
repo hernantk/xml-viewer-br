@@ -16,6 +16,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
   const [dragging, setDragging] = useState(false);
   const loadFile = useDocumentStore((s) => s.loadFile);
   const loadMultipleFiles = useDocumentStore((s) => s.loadMultipleFiles);
+  const loadPaths = useDocumentStore((s) => s.loadPaths);
   const setError = useDocumentStore((s) => s.setError);
   const dragDepthRef = useRef(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
@@ -33,24 +34,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
       }
 
       try {
-        const { readTextFile } = await import("@tauri-apps/plugin-fs");
-
-        if (xmlPaths.length === 1) {
-          const content = await readTextFile(xmlPaths[0]);
-          loadFile(xmlPaths[0], content);
-          return;
-        }
-
-        const files: { id: string; content: string }[] = [];
-        for (const p of xmlPaths) {
-          try {
-            const content = await readTextFile(p);
-            files.push({ id: p, content });
-          } catch {
-            /* skip unreadable */
-          }
-        }
-        const result = await loadMultipleFiles(files);
+        const result = await loadPaths(xmlPaths);
         if (result.limitIncreased) {
           setImportNotice(
             `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
@@ -68,7 +52,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
         );
       }
     },
-    [isXmlFile, loadFile, loadMultipleFiles, setError],
+    [isXmlFile, loadPaths, setError],
   );
 
   const handleDrop = useCallback(

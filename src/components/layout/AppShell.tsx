@@ -4,6 +4,7 @@ import { Header } from "./Header";
 import { DocumentViewer } from "../viewers/DocumentViewer";
 import { EmptyState } from "../common/EmptyState";
 import { FileDropZone } from "../common/FileDropZone";
+import { useAssociatedFileOpen } from "@/hooks/useAssociatedFileOpen";
 import { useDocumentStore } from "@/store/documentStore";
 
 export function AppShell() {
@@ -11,6 +12,8 @@ export function AppShell() {
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const loading = useDocumentStore((s) => s.loading);
   const error = useDocumentStore((s) => s.error);
+
+  useAssociatedFileOpen();
 
   return (
     <FileDropZone>

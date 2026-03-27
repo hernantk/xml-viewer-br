@@ -5,6 +5,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import appLogo from "@/assets/branding/app-logo.svg";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import type { DocumentType } from "@/types/common";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): string {
   if (!lastOpenedAt) return "agora";
@@ -121,6 +122,14 @@ export function Sidebar() {
     return matchesSearch && matchesType;
   });
 
+  const listParentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: filteredRecentFiles.length,
+    getScrollElement: () => listParentRef.current,
+    estimateSize: () => 36,
+    overscan: 10,
+  });
+
   return (
     <aside className="flex w-60 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 no-print">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -139,7 +148,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-3 py-2">
+      <div className="px-3 pt-2">
         <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400">
           <Clock size={14} />
           Arquivos Recentes
@@ -180,7 +189,9 @@ export function Sidebar() {
             </div>
           </div>
         )}
+      </div>
 
+      <div ref={listParentRef} className="flex-1 overflow-auto px-3 pb-2">
         {recentFiles.length === 0 ? (
           <p className="text-sm text-gray-400 dark:text-gray-500 italic">
             Nenhum arquivo recente
@@ -190,15 +201,28 @@ export function Sidebar() {
             Nenhum arquivo encontrado para esse filtro
           </p>
         ) : (
-          <ul className="space-y-0.5">
-            {filteredRecentFiles.map((recentFile) => {
+          <div
+            style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const recentFile = filteredRecentFiles[virtualItem.index];
               const meta = recentFile.documentType
                 ? getDocumentMeta(recentFile.documentType)
                 : null;
               const ItemIcon = meta?.icon;
 
               return (
-                <li key={recentFile.id}>
+                <div
+                  key={recentFile.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
                   <button
                     onClick={() => loadFile(recentFile.id)}
                     onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
@@ -228,10 +252,10 @@ export function Sidebar() {
                       </span>
                     </span>
                   </button>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
 

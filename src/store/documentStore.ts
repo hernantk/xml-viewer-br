@@ -30,6 +30,7 @@ interface DocumentState {
   setDownloadDir: (dir: string) => void;
   removeRecentFile: (fileId: string) => void;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
+  loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
 }
 
 const DEFAULT_MAX_RECENT_FILES = 300;
@@ -216,6 +217,15 @@ function persistRecentFiles(
   localStorage.setItem(RECENT_CACHE_KEY, JSON.stringify(trimmedCache));
 }
 
+async function readFilesystemFile(path: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    throw new Error("Abrir caminhos do sistema de arquivos so esta disponivel no app desktop.");
+  }
+
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<string>("read_file", { path });
+}
+
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   currentDocument: null,
   currentXml: null,
@@ -238,14 +248,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         if (cachedContent) {
           content = cachedContent;
         } else {
-          if (!isTauriRuntime()) {
+          if (!canReopenRecentFile(fileId)) {
             throw new Error(
               "Esse arquivo recente nao esta disponivel neste ambiente.",
             );
           }
-
-          const { readTextFile } = await import("@tauri-apps/plugin-fs");
-          content = await readTextFile(fileId);
+          content = await readFilesystemFile(fileId);
         }
       }
 
@@ -415,6 +423,43 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     });
 
     return { loaded, skipped, limitIncreased, newLimit: currentMax };
+  },
+
+  loadPaths: async (paths) => {
+    const uniqueXmlPaths = [...new Set(paths)]
+      .filter((path) => path.toLowerCase().endsWith(".xml"));
+
+    if (uniqueXmlPaths.length === 0) {
+      return { loaded: 0, skipped: 0, limitIncreased: false, newLimit: get().maxRecentFiles };
+    }
+
+    const files: { id: string; content: string }[] = [];
+    let skipped = 0;
+
+    for (const path of uniqueXmlPaths) {
+      try {
+        const content = await readFilesystemFile(path);
+        files.push({ id: path, content });
+      } catch {
+        skipped++;
+      }
+    }
+
+    if (files.length === 0) {
+      const message = skipped > 0
+        ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
+        : "Nenhum arquivo XML valido foi encontrado.";
+      set({ error: message });
+      return { loaded: 0, skipped, limitIncreased: false, newLimit: get().maxRecentFiles };
+    }
+
+    const result = await get().loadMultipleFiles(files);
+    return {
+      loaded: result.loaded,
+      skipped: result.skipped + skipped,
+      limitIncreased: result.limitIncreased,
+      newLimit: result.newLimit,
+    };
   },
 }));
 
