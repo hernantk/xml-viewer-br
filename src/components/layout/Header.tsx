@@ -25,10 +25,11 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
   const toggleTheme = useDocumentStore((s) => s.toggleTheme);
-  const { openFile } = useFileOpen();
+  const { openFile, importNotice } = useFileOpen();
   const { exportPdf, exporting } = usePdfExport();
 
   return (
+    <>
     <header className="h-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 no-print">
       <button
         onClick={onToggleSidebar}
@@ -107,5 +108,11 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
+    {importNotice && (
+      <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
+        {importNotice}
+      </div>
+    )}
+    </>
   );
 }

@@ -28,6 +28,7 @@ interface DocumentState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setMaxRecentFiles: (max: number) => void;
+  loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
 }
 
 const DEFAULT_MAX_RECENT_FILES = 300;
@@ -298,6 +299,64 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const xmlCache = getRecentFileCache();
     persistRecentFiles(trimmed, xmlCache);
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
+  },
+
+  loadMultipleFiles: async (files) => {
+    if (files.length === 0) return { loaded: 0, skipped: 0, limitIncreased: false, newLimit: get().maxRecentFiles };
+
+    set({ loading: true, error: null });
+
+    let limitIncreased = false;
+    let currentMax = get().maxRecentFiles;
+    const currentCount = get().recentFiles.length;
+    const uniqueNewIds = new Set(files.map((f) => f.id));
+    const existingIds = new Set(get().recentFiles.map((r) => r.id));
+    const trulyNewCount = [...uniqueNewIds].filter((id) => !existingIds.has(id)).length;
+    const totalAfterImport = currentCount + trulyNewCount;
+
+    if (totalAfterImport > currentMax) {
+      const newLimit = totalAfterImport + 500;
+      localStorage.setItem(MAX_RECENT_FILES_KEY, String(newLimit));
+      currentMax = newLimit;
+      limitIncreased = true;
+      set({ maxRecentFiles: newLimit });
+    }
+
+    let loaded = 0;
+    let skipped = 0;
+    let lastDoc: ParsedDocument | null = null;
+    let lastXml: string | null = null;
+    let lastFilePath: string | null = null;
+    let recentFiles = get().recentFiles;
+    const xmlCache = { ...getRecentFileCache() };
+
+    for (const file of files) {
+      try {
+        const doc = parseXml(file.content);
+        recentFiles = buildRecentFiles(file.id, recentFiles, currentMax);
+        xmlCache[file.id] = file.content;
+        lastDoc = doc;
+        lastXml = file.content;
+        lastFilePath = file.id;
+        loaded++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    persistRecentFiles(recentFiles, xmlCache);
+
+    set({
+      currentDocument: lastDoc,
+      currentXml: lastXml,
+      currentFilePath: lastFilePath,
+      recentFiles,
+      loading: false,
+      error: skipped > 0 ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.` : null,
+      validation: null,
+    });
+
+    return { loaded, skipped, limitIncreased, newLimit: currentMax };
   },
 }));
 

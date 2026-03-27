@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock, File } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
+import appLogo from "@/assets/branding/app-logo.png";
 
 function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): string {
   if (!lastOpenedAt) return "agora";
@@ -37,10 +38,19 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-lg font-bold">XML Viewer BR</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          NF-e / CT-e / NFS-e
-        </p>
+        <div className="flex items-center gap-3">
+          <img
+            src={appLogo}
+            alt="Logo do XML Viewer BR"
+            className="h-11 w-11 shrink-0 object-contain"
+          />
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold leading-tight">XML Viewer BR</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              NF-e / CT-e / NFS-e
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-3">

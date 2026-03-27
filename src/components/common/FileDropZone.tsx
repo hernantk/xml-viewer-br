@@ -15,33 +15,60 @@ interface FileDropZoneProps {
 export function FileDropZone({ children }: FileDropZoneProps) {
   const [dragging, setDragging] = useState(false);
   const loadFile = useDocumentStore((s) => s.loadFile);
+  const loadMultipleFiles = useDocumentStore((s) => s.loadMultipleFiles);
   const setError = useDocumentStore((s) => s.setError);
   const dragDepthRef = useRef(0);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
 
   const isXmlFile = useCallback((fileName: string) => {
     return fileName.toLowerCase().endsWith(".xml");
   }, []);
 
   const readFileFromPath = useCallback(
-    async (filePath: string) => {
-      if (!isXmlFile(filePath)) {
-        setError("Solte um arquivo com extensao .xml.");
+    async (filePaths: string[]) => {
+      const xmlPaths = filePaths.filter((p) => isXmlFile(p));
+      if (xmlPaths.length === 0) {
+        setError("Solte arquivos com extensão .xml.");
         return;
       }
 
       try {
         const { readTextFile } = await import("@tauri-apps/plugin-fs");
-        const content = await readTextFile(filePath);
-        loadFile(filePath, content);
+
+        if (xmlPaths.length === 1) {
+          const content = await readTextFile(xmlPaths[0]);
+          loadFile(xmlPaths[0], content);
+          return;
+        }
+
+        const files: { id: string; content: string }[] = [];
+        for (const p of xmlPaths) {
+          try {
+            const content = await readTextFile(p);
+            files.push({ id: p, content });
+          } catch {
+            /* skip unreadable */
+          }
+        }
+        const result = await loadMultipleFiles(files);
+        if (result.limitIncreased) {
+          setImportNotice(
+            `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
+          );
+          setTimeout(() => setImportNotice(null), 5000);
+        } else if (result.loaded > 1) {
+          setImportNotice(`${result.loaded} arquivo(s) importado(s).`);
+          setTimeout(() => setImportNotice(null), 4000);
+        }
       } catch (error) {
         setError(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel ler o arquivo arrastado.",
+            : "Não foi possível ler o(s) arquivo(s) arrastado(s).",
         );
       }
     },
-    [isXmlFile, loadFile, setError],
+    [isXmlFile, loadFile, loadMultipleFiles, setError],
   );
 
   const handleDrop = useCallback(
@@ -53,24 +80,47 @@ export function FileDropZone({ children }: FileDropZoneProps) {
       const files = e.dataTransfer?.files;
       if (!files || files.length === 0) return;
 
-      const file = files[0];
-      if (!isXmlFile(file.name)) {
-        setError("Solte um arquivo com extensao .xml.");
+      const xmlFiles = Array.from(files).filter((f) => isXmlFile(f.name));
+      if (xmlFiles.length === 0) {
+        setError("Solte arquivos com extensão .xml.");
         return;
       }
 
       try {
-        const text = await file.text();
-        loadFile(createMemoryFileId(file.name), text);
+        if (xmlFiles.length === 1) {
+          const text = await xmlFiles[0].text();
+          loadFile(createMemoryFileId(xmlFiles[0].name), text);
+          return;
+        }
+
+        const parsed: { id: string; content: string }[] = [];
+        for (const f of xmlFiles) {
+          try {
+            const text = await f.text();
+            parsed.push({ id: createMemoryFileId(f.name), content: text });
+          } catch {
+            /* skip unreadable */
+          }
+        }
+        const result = await loadMultipleFiles(parsed);
+        if (result.limitIncreased) {
+          setImportNotice(
+            `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
+          );
+          setTimeout(() => setImportNotice(null), 5000);
+        } else if (result.loaded > 1) {
+          setImportNotice(`${result.loaded} arquivo(s) importado(s).`);
+          setTimeout(() => setImportNotice(null), 4000);
+        }
       } catch (error) {
         setError(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel ler o arquivo arrastado.",
+            : "Não foi possível ler o(s) arquivo(s) arrastado(s).",
         );
       }
     },
-    [isXmlFile, loadFile, setError],
+    [isXmlFile, loadFile, loadMultipleFiles, setError],
   );
 
   const handleDragEnter = useCallback((e: DragEvent) => {
@@ -120,9 +170,9 @@ export function FileDropZone({ children }: FileDropZoneProps) {
           }
 
           setDragging(false);
-          const [filePath] = event.payload.paths;
-          if (filePath) {
-            await readFileFromPath(filePath);
+          const paths = event.payload.paths;
+          if (paths && paths.length > 0) {
+            await readFileFromPath(paths);
           }
         },
       );
@@ -153,8 +203,13 @@ export function FileDropZone({ children }: FileDropZoneProps) {
         <div className="pointer-events-none fixed inset-0 bg-blue-500/20 backdrop-blur-sm z-50 flex items-center justify-center border-4 border-dashed border-blue-500">
           <div className="flex flex-col items-center text-blue-600 dark:text-blue-400">
             <Upload size={48} />
-            <p className="mt-2 text-lg font-medium">Solte o arquivo XML aqui</p>
+            <p className="mt-2 text-lg font-medium">Solte os arquivos XML aqui</p>
           </div>
+        </div>
+      )}
+      {importNotice && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg animate-fade-in">
+          {importNotice}
         </div>
       )}
     </div>
