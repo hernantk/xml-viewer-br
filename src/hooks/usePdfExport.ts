@@ -101,30 +101,48 @@ export function usePdfExport() {
       }
 
       const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
-      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
 
-      const printFrame = document.createElement("iframe");
-      printFrame.style.position = "fixed";
-      printFrame.style.left = "-9999px";
-      printFrame.style.top = "-9999px";
-      printFrame.style.width = "0";
-      printFrame.style.height = "0";
-      printFrame.src = url;
-      document.body.appendChild(printFrame);
+      // Try Tauri: save to temp and open with system PDF viewer
+      let handled = false;
+      try {
+        const { writeFile } = await import("@tauri-apps/plugin-fs");
+        const { tempDir } = await import("@tauri-apps/api/path");
+        const { openPath } = await import("@tauri-apps/plugin-opener");
+        const tempDirPath = await tempDir();
+        const filePath = `${tempDirPath}${defaultName}.pdf`;
+        await writeFile(filePath, pdfBytes);
+        await openPath(filePath);
+        handled = true;
+      } catch (e) {
+        console.error("Tauri print failed, using fallback:", e);
+      }
 
-      printFrame.onload = () => {
-        try {
-          printFrame.contentWindow?.print();
-        } catch {
-          // Fallback: open in new tab for manual printing
-          window.open(url, "_blank");
-        }
-        setTimeout(() => {
-          document.body.removeChild(printFrame);
-          URL.revokeObjectURL(url);
-        }, 1000);
-      };
+      if (!handled) {
+        // Browser fallback: iframe print
+        const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+
+        const printFrame = document.createElement("iframe");
+        printFrame.style.position = "fixed";
+        printFrame.style.left = "-9999px";
+        printFrame.style.top = "-9999px";
+        printFrame.style.width = "0";
+        printFrame.style.height = "0";
+        printFrame.src = url;
+        document.body.appendChild(printFrame);
+
+        printFrame.onload = () => {
+          try {
+            printFrame.contentWindow?.print();
+          } catch {
+            window.open(url, "_blank");
+          }
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+            URL.revokeObjectURL(url);
+          }, 1000);
+        };
+      }
     } catch (err) {
       console.error("Erro ao imprimir:", err);
       alert(
