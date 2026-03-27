@@ -93,7 +93,7 @@ export function BatchPdfModal({
           </div>
 
           <div className="space-y-4 p-4">
-            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto]  md:items-center">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Pasta de origem
@@ -115,7 +115,7 @@ export function BatchPdfModal({
                 type="button"
                 onClick={onPickSourceDir}
                 disabled={isRunning}
-                className="inline-flex items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                className="inline-flex mt-[3px] items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <FolderOpen size={16} />
                 Escolher pasta
