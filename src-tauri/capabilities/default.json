@@ -12,7 +12,11 @@
     "fs:allow-write-file",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$TEMP/**" }]
+      "allow": [
+        { "path": "$TEMP/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$HOME/**" }
+      ]
     },
     "opener:default",
     {

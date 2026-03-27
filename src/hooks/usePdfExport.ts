@@ -6,6 +6,7 @@ export function usePdfExport() {
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
+  const downloadDir = useDocumentStore((s) => s.downloadDir);
 
   const exportPdf = useCallback(async () => {
     if (!currentDocument) return;
@@ -36,18 +37,25 @@ export function usePdfExport() {
 
       const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
 
-      // Try to save via Tauri dialog
+      // Try to save via Tauri
       try {
-        const { save } = await import("@tauri-apps/plugin-dialog");
         const { writeFile } = await import("@tauri-apps/plugin-fs");
 
-        const outputPath = await save({
-          defaultPath: `${defaultName}.pdf`,
-          filters: [{ name: "PDF", extensions: ["pdf"] }],
-        });
-
-        if (outputPath) {
-          await writeFile(outputPath, pdfBytes);
+        if (downloadDir) {
+          // Save directly without dialog
+          const sep = downloadDir.includes("\\") ? "\\" : "/";
+          const filePath = `${downloadDir}${sep}${defaultName}.pdf`;
+          await writeFile(filePath, pdfBytes);
+        } else {
+          // No dir configured — use save dialog
+          const { save } = await import("@tauri-apps/plugin-dialog");
+          const outputPath = await save({
+            defaultPath: `${defaultName}.pdf`,
+            filters: [{ name: "PDF", extensions: ["pdf"] }],
+          });
+          if (outputPath) {
+            await writeFile(outputPath, pdfBytes);
+          }
         }
       } catch {
         // Fallback: browser download

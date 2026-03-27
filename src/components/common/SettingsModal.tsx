@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, FolderOpen } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 
 interface SettingsModalProps {
@@ -11,17 +11,34 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const maxRecentFiles = useDocumentStore((s) => s.maxRecentFiles);
   const recentFilesCount = useDocumentStore((s) => s.recentFiles.length);
   const setMaxRecentFiles = useDocumentStore((s) => s.setMaxRecentFiles);
+  const downloadDir = useDocumentStore((s) => s.downloadDir);
+  const setDownloadDir = useDocumentStore((s) => s.setDownloadDir);
   const [inputValue, setInputValue] = useState(String(maxRecentFiles));
+  const [downloadDirValue, setDownloadDirValue] = useState(downloadDir);
   const [showWarning, setShowWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setInputValue(String(maxRecentFiles));
+      setDownloadDirValue(downloadDir);
       setShowWarning(false);
       setTimeout(() => inputRef.current?.select(), 0);
+
+      // Resolve system Downloads folder if not configured yet
+      if (!downloadDir) {
+        (async () => {
+          try {
+            const { downloadDir: getDownloadDir } = await import("@tauri-apps/api/path");
+            const dir = await getDownloadDir();
+            if (dir) setDownloadDirValue(dir);
+          } catch {
+            /* not in Tauri */
+          }
+        })();
+      }
     }
-  }, [open, maxRecentFiles]);
+  }, [open, maxRecentFiles, downloadDir]);
 
   if (!open) return null;
 
@@ -41,7 +58,20 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       return;
     }
     setMaxRecentFiles(numValue);
+    setDownloadDir(downloadDirValue);
     onClose();
+  };
+
+  const handlePickFolder = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({ directory: true, multiple: false });
+      if (selected) {
+        setDownloadDirValue(selected as string);
+      }
+    } catch {
+      // Not in Tauri — ignore
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -109,6 +139,37 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </p>
               </div>
             )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="downloadDir"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Pasta padrão de downloads
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Caminho padrão para salvar arquivos XML e PDF exportados.
+            </p>
+            <div className="flex gap-2">
+              <input
+                id="downloadDir"
+                type="text"
+                value={downloadDirValue}
+                onChange={(e) => setDownloadDirValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Pasta de Downloads do sistema"
+                className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 truncate"
+              />
+              <button
+                type="button"
+                onClick={handlePickFolder}
+                className="shrink-0 px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                title="Escolher pasta"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
           </div>
         </div>
 

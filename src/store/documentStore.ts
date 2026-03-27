@@ -17,6 +17,7 @@ interface DocumentState {
   loading: boolean;
   error: string | null;
   maxRecentFiles: number;
+  downloadDir: string;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
   setDocument: (doc: ParsedDocument, xml: string, filePath: string) => void;
@@ -26,12 +27,14 @@ interface DocumentState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setMaxRecentFiles: (max: number) => void;
+  setDownloadDir: (dir: string) => void;
   removeRecentFile: (fileId: string) => void;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
 }
 
 const DEFAULT_MAX_RECENT_FILES = 300;
 const MAX_RECENT_FILES_KEY = "xmlviewer-max-recent";
+const DOWNLOAD_DIR_KEY = "xmlviewer-download-dir";
 const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
 
@@ -46,6 +49,16 @@ function getMaxRecentFiles(): number {
     /* ignore */
   }
   return DEFAULT_MAX_RECENT_FILES;
+}
+
+function getDownloadDir(): string {
+  try {
+    const saved = localStorage.getItem(DOWNLOAD_DIR_KEY);
+    if (saved) return saved;
+  } catch {
+    /* ignore */
+  }
+  return "";
 }
 
 function isTauriRuntime(): boolean {
@@ -213,6 +226,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   loading: false,
   error: null,
   maxRecentFiles: getMaxRecentFiles(),
+  downloadDir: getDownloadDir(),
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
@@ -315,6 +329,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const xmlCache = getRecentFileCache();
     persistRecentFiles(trimmed, xmlCache);
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
+  },
+
+  setDownloadDir: (dir: string) => {
+    localStorage.setItem(DOWNLOAD_DIR_KEY, dir);
+    set({ downloadDir: dir });
   },
 
   removeRecentFile: (fileId: string) => {

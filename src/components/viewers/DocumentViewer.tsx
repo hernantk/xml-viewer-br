@@ -11,7 +11,9 @@ export function DocumentViewer() {
   const loading = useDocumentStore((s) => s.loading);
   const error = useDocumentStore((s) => s.error);
   const currentXml = useDocumentStore((s) => s.currentXml);
+  const downloadDir = useDocumentStore((s) => s.downloadDir);
   const [copied, setCopied] = useState(false);
+  const [downloadNotice, setDownloadNotice] = useState("");
 
   if (loading) {
     return (
@@ -67,17 +69,45 @@ export function DocumentViewer() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadXml = () => {
+  const handleDownloadXml = async () => {
     if (!currentXml) return;
-    const blob = new Blob([currentXml], { type: "application/xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${documentName.replace(/[^a-zA-Z0-9áéíóúãõçÁÉÍÓÚÃÕÇ _\-–—]/g, "_")}.xml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const fileName = `${documentName.replace(/[^a-zA-Z0-9áéíóúãõçÁÉÍÓÚÃÕÇ _\-–—]/g, "_")}.xml`;
+
+    try {
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+
+      if (downloadDir) {
+        // Save directly without dialog
+        const sep = downloadDir.includes("\\") ? "\\" : "/";
+        const filePath = `${downloadDir}${sep}${fileName}`;
+        await writeTextFile(filePath, currentXml);
+        setDownloadNotice(`Salvo em ${filePath}`);
+        setTimeout(() => setDownloadNotice(""), 3000);
+      } else {
+        // No dir configured — use save dialog
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const outputPath = await save({
+          defaultPath: fileName,
+          filters: [{ name: "XML", extensions: ["xml"] }],
+        });
+        if (outputPath) {
+          await writeTextFile(outputPath, currentXml);
+          setDownloadNotice(`Salvo em ${outputPath}`);
+          setTimeout(() => setDownloadNotice(""), 3000);
+        }
+      }
+    } catch {
+      // Fallback: browser download
+      const blob = new Blob([currentXml], { type: "application/xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   let viewer = null;
@@ -136,6 +166,12 @@ export function DocumentViewer() {
       </div>
 
       <div id="document-viewer-content">{viewer}</div>
+
+      {downloadNotice && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg no-print">
+          {downloadNotice}
+        </div>
+      )}
     </div>
   );
 }
