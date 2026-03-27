@@ -17,13 +17,14 @@ function getElAll(parent: Element, tagName: string): Element[] {
 }
 
 export function detectDocumentType(xml: string): DocumentType {
+  // CT-e must be checked before NF-e because CT-e XMLs can contain <infNFe> references
+  if (xml.includes("cteProc") || xml.includes("<CTe") || xml.includes("infCte") || xml.includes("portalfiscal.inf.br/cte")) {
+    return "cte";
+  }
   if (xml.includes("nfeProc") || xml.includes("infNFe") || xml.includes("portalfiscal.inf.br/nfe")) {
     return "nfe";
   }
-  if (xml.includes("cteProc") || xml.includes("infCte") || xml.includes("portalfiscal.inf.br/cte")) {
-    return "cte";
-  }
-  if (xml.includes("CompNfse") || xml.includes("InfNfse") || xml.includes("abrasf")) {
+  if (xml.includes("CompNfse") || xml.includes("InfNfse") || xml.includes("InfNFSe") || xml.includes("<NFSe") || xml.includes("abrasf")) {
     return "nfse";
   }
   throw new Error("Tipo de documento XML não reconhecido. Suportados: NF-e, CT-e, NFS-e.");
@@ -613,18 +614,19 @@ function parseProtCTe(el: Element): ProtCTe {
 // ============================================================
 
 function parseNfse(doc: Document): CompNfse {
-  const compNfseEl = getEl(doc.documentElement, "CompNfse") || doc.documentElement;
-  const nfseEl = getEl(compNfseEl, "Nfse");
-  if (!nfseEl) {
-    // Try to parse directly if the root is already the Nfse
-    const infNfseEl = getEl(compNfseEl, "InfNfse");
-    if (infNfseEl) {
-      return { nfse: { infNfse: parseInfNfse(infNfseEl) } };
-    }
+  const root = doc.documentElement;
+  const compNfseEl = getEl(root, "CompNfse");
+  const container = compNfseEl || root;
+
+  // Handle different tag name casing (Nfse vs NFSe)
+  const nfseEl = getEl(container, "Nfse") || getEl(container, "NFSe");
+  const searchBase = nfseEl || container;
+
+  const infNfseEl = getEl(searchBase, "InfNfse") || getEl(searchBase, "InfNFSe");
+  if (!infNfseEl) {
     throw new Error("Elemento Nfse ou InfNfse não encontrado no XML.");
   }
 
-  const infNfseEl = getEl(nfseEl, "InfNfse")!;
   return {
     nfse: { infNfse: parseInfNfse(infNfseEl) },
   };
@@ -636,6 +638,40 @@ function parseInfNfse(el: Element): InfNfse {
   const tomadorEl = getEl(el, "TomadorServico");
   const orgaoEl = getEl(el, "OrgaoGerador");
   const dpsEl = getEl(el, "DeclaracaoPrestacaoServico");
+  // Some NFS-e formats have Servico as a direct child of InfNFSe
+  const servicoEl = getEl(el, "Servico");
+
+  // Build DPS – either from explicit DPS element or from top-level Servico
+  let dps: DeclaracaoPrestacaoServico | undefined;
+  if (dpsEl) {
+    dps = parseDPS(dpsEl, servicoEl);
+  } else if (servicoEl) {
+    const identEl = getEl(prestadorEl, "IdentificacaoPrestador");
+    dps = {
+      infDeclaracaoPrestacaoServico: {
+        servico: parseServico(servicoEl),
+        prestador: {
+          cnpj: identEl ? (getTxt(identEl, "Cnpj") || getTxt(identEl, "CpfCnpj")) : "",
+        },
+      },
+    };
+  }
+
+  // Populate valoresNfse – prefer ValoresNfse element, fallback to Servico > Valores
+  let valoresNfse: ValoresNfse;
+  if (valoresNfseEl) {
+    valoresNfse = parseValoresNfse(valoresNfseEl);
+  } else if (servicoEl) {
+    const valoresEl = getEl(servicoEl, "Valores");
+    valoresNfse = valoresEl ? {
+      baseCalculo: getTxt(valoresEl, "ValorServicos") || "0",
+      aliquota: getTxt(valoresEl, "Aliquota") || undefined,
+      valorIss: getTxt(valoresEl, "ValorIss") || undefined,
+      valorLiquidoNfse: getTxt(valoresEl, "ValorLiquidoNfse") || "0",
+    } : { baseCalculo: "0", valorLiquidoNfse: "0" };
+  } else {
+    valoresNfse = { baseCalculo: "0", valorLiquidoNfse: "0" };
+  }
 
   return {
     numero: getTxt(el, "Numero"),
@@ -643,11 +679,11 @@ function parseInfNfse(el: Element): InfNfse {
     dataEmissao: getTxt(el, "DataEmissao"),
     nfseSubstituida: getTxt(el, "NfseSubstituida") || undefined,
     outrasInformacoes: getTxt(el, "OutrasInformacoes") || undefined,
-    valoresNfse: valoresNfseEl ? parseValoresNfse(valoresNfseEl) : { baseCalculo: "0", valorLiquidoNfse: "0" },
+    valoresNfse,
     prestadorServico: parsePrestador(prestadorEl),
     tomadorServico: tomadorEl ? parseTomador(tomadorEl) : undefined,
     orgaoGerador: orgaoEl ? parseOrgaoGerador(orgaoEl) : undefined,
-    declaracaoPrestacaoServico: dpsEl ? parseDPS(dpsEl) : undefined,
+    declaracaoPrestacaoServico: dps,
   };
 }
 
@@ -718,20 +754,30 @@ function parseOrgaoGerador(el: Element): OrgaoGerador {
   };
 }
 
-function parseDPS(el: Element): DeclaracaoPrestacaoServico {
-  const infEl = getEl(el, "InfDeclaracaoPrestacaoServico")!;
-  const servicoEl = getEl(infEl, "Servico")!;
-  const prestadorEl = getEl(infEl, "Prestador")!;
+function parseDPS(el: Element, fallbackServicoEl?: Element | null): DeclaracaoPrestacaoServico {
+  const infEl = getEl(el, "InfDeclaracaoPrestacaoServico");
+  if (!infEl) {
+    const svcEl = fallbackServicoEl;
+    return {
+      infDeclaracaoPrestacaoServico: {
+        servico: svcEl ? parseServico(svcEl) : { valores: { valorServicos: "0" }, itemListaServico: "", discriminacao: "", codigoMunicipio: "" },
+        prestador: { cnpj: "" },
+      },
+    };
+  }
+
+  const servicoEl = getEl(infEl, "Servico") || fallbackServicoEl;
+  const prestadorEl = getEl(infEl, "Prestador");
   const tomadorEl = getEl(infEl, "Tomador");
 
   return {
     infDeclaracaoPrestacaoServico: {
       competencia: getTxt(infEl, "Competencia") || undefined,
-      servico: parseServico(servicoEl),
-      prestador: {
+      servico: servicoEl ? parseServico(servicoEl) : { valores: { valorServicos: "0" }, itemListaServico: "", discriminacao: "", codigoMunicipio: "" },
+      prestador: prestadorEl ? {
         cnpj: getTxt(prestadorEl, "Cnpj") || getTxt(prestadorEl, "CpfCnpj"),
         inscricaoMunicipal: getTxt(prestadorEl, "InscricaoMunicipal") || undefined,
-      },
+      } : { cnpj: "" },
       tomador: tomadorEl ? parseTomador(tomadorEl) : undefined,
       optanteSimplesNacional: getTxt(infEl, "OptanteSimplesNacional") || undefined,
       incentivoFiscal: getTxt(infEl, "IncentivoFiscal") || undefined,
