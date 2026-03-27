@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Clock, File, FileDown, Printer, Trash2 } from "lucide-react";
+import { Clock, FileDown, Printer, Search, Trash2 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import appLogo from "@/assets/branding/app-logo.svg";
+import { getDocumentMeta } from "@/utils/documentMeta";
+import type { DocumentType } from "@/types/common";
 
 function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): string {
   if (!lastOpenedAt) return "agora";
@@ -22,6 +24,8 @@ function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): strin
 
 export function Sidebar() {
   const [now, setNow] = useState(() => Date.now());
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
   const recentFiles = useDocumentStore((s) => s.recentFiles);
   const loadFile = useDocumentStore((s) => s.loadFile);
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
@@ -106,8 +110,19 @@ export function Sidebar() {
     };
   }, []);
 
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredRecentFiles = recentFiles.filter((recentFile) => {
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      recentFile.label.toLowerCase().includes(normalizedSearch);
+    const matchesType =
+      typeFilter === "all" || recentFile.documentType === typeFilter;
+
+    return matchesSearch && matchesType;
+  });
+
   return (
-    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+    <aside className="flex w-60 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 no-print">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <img
@@ -124,41 +139,98 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+      <div className="flex-1 overflow-auto px-3 py-2">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400">
           <Clock size={14} />
           Arquivos Recentes
         </div>
+
+        {recentFiles.length > 0 && (
+          <div className="mb-2 rounded-lg ">
+            <div className="flex items-center gap-1">
+              <label className="relative min-w-0 flex-1">
+                <Search
+                  size={12}
+                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar"
+                  className="h-7 w-full rounded-md bg-white/90 py-1 pl-7 pr-2 text-[11px] text-gray-700 outline-none ring-0 transition placeholder:text-gray-400 focus:bg-white dark:bg-gray-900/80 dark:text-gray-200 dark:focus:bg-gray-900"
+                />
+              </label>
+              <div className="relative shrink-0">
+                <select
+                  value={typeFilter}
+                  onChange={(e) =>
+                    setTypeFilter(e.target.value as "all" | DocumentType)
+                  }
+                  className="h-7 appearance-none rounded-md bg-white/90 pl-2 pr-6 text-[11px] font-medium text-gray-600 outline-none transition focus:bg-white dark:bg-gray-900/80 dark:text-gray-300 dark:focus:bg-gray-900"
+                >
+                  <option value="all">Todos</option>
+                  <option value="nfe">NF-e</option>
+                  <option value="cte">CT-e</option>
+                  <option value="nfse">NFS-e</option>
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 dark:text-gray-500">
+                  ▾
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {recentFiles.length === 0 ? (
           <p className="text-sm text-gray-400 dark:text-gray-500 italic">
             Nenhum arquivo recente
           </p>
+        ) : filteredRecentFiles.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+            Nenhum arquivo encontrado para esse filtro
+          </p>
         ) : (
-          <ul className="space-y-1">
-            {recentFiles.map((recentFile) => (
-              <li key={recentFile.id}>
-                <button
-                  onClick={() => loadFile(recentFile.id)}
-                  onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
-                  className="w-full justify-between text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 min-w-0"
-                  title={recentFile.label}
-                >
-                  <span className="flex items-center gap-2 min-w-0">
-                    <File size={14} className="shrink-0 text-gray-400 dark:text-gray-500" />
-                    <span className="truncate">
-                      {recentFile.label}
+          <ul className="space-y-0.5">
+            {filteredRecentFiles.map((recentFile) => {
+              const meta = recentFile.documentType
+                ? getDocumentMeta(recentFile.documentType)
+                : null;
+              const ItemIcon = meta?.icon;
+
+              return (
+                <li key={recentFile.id}>
+                  <button
+                    onClick={() => loadFile(recentFile.id)}
+                    onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
+                    className="w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800"
+                    title={recentFile.label}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {ItemIcon ? (
+                            <ItemIcon size={13} className="shrink-0" />
+                          ) : (
+                            <Search size={13} className="shrink-0" />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                            {recentFile.label}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                        {formatTimeSince(
+                          recentFile.lastOpenedAt,
+                          recentFile.id === currentFilePath ? Date.now() : now,
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="w-8  shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500 text-right">
-                    {formatTimeSince(
-                      recentFile.lastOpenedAt,
-                      recentFile.id === currentFilePath ? Date.now() : now,
-                    )}
-                  </span>
-                </button>
-              </li>
-            ))}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

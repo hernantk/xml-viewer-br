@@ -1,5 +1,13 @@
 export type DocumentType = "nfe" | "cte" | "nfse";
 
+export interface RecentFileEntry {
+  id: string;
+  label: string;
+  source: "filesystem" | "memory";
+  lastOpenedAt: number;
+  documentType?: DocumentType;
+}
+
 export interface Endereco {
   xLgr: string;
   nro: string;

@@ -1,13 +1,11 @@
 import { create } from "zustand";
-import type { ParsedDocument, ValidationResult } from "@/types/common";
+import type {
+  DocumentType,
+  ParsedDocument,
+  RecentFileEntry,
+  ValidationResult,
+} from "@/types/common";
 import { parseXml } from "@/services/xmlParser";
-
-export interface RecentFileEntry {
-  id: string;
-  label: string;
-  source: "filesystem" | "memory";
-  lastOpenedAt: number;
-}
 
 interface DocumentState {
   currentDocument: ParsedDocument | null;
@@ -82,6 +80,7 @@ function getFileLabel(fileId: string): string {
 function buildRecentFiles(
   fileId: string,
   recentFiles: RecentFileEntry[],
+  documentType?: DocumentType,
   maxFiles: number = DEFAULT_MAX_RECENT_FILES,
 ): RecentFileEntry[] {
   const now = Date.now();
@@ -91,7 +90,7 @@ function buildRecentFiles(
   const label = getFileLabel(fileId);
 
   return [
-    { id: fileId, label, source, lastOpenedAt: now },
+    { id: fileId, label, source, lastOpenedAt: now, documentType },
     ...recentFiles.filter((entry) => entry.id !== fileId),
   ].slice(0, maxFiles);
 }
@@ -142,6 +141,12 @@ function getRecentFiles(): RecentFileEntry[] {
               entry.source === "memory" ? "memory" : "filesystem",
             lastOpenedAt:
               typeof entry.lastOpenedAt === "number" ? entry.lastOpenedAt : 0,
+            documentType:
+              entry.documentType === "nfe" ||
+              entry.documentType === "cte" ||
+              entry.documentType === "nfse"
+                ? entry.documentType
+                : undefined,
           };
         }
 
@@ -231,7 +236,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
 
       const doc = parseXml(content);
-      const recent = buildRecentFiles(fileId, get().recentFiles, get().maxRecentFiles);
+      const recent = buildRecentFiles(
+        fileId,
+        get().recentFiles,
+        doc.documentType,
+        get().maxRecentFiles,
+      );
       const xmlCache = {
         ...getRecentFileCache(),
         [fileId]: content,
@@ -256,7 +266,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   setDocument: (doc, xml, filePath) => {
-    const recent = buildRecentFiles(filePath, get().recentFiles, get().maxRecentFiles);
+    const recent = buildRecentFiles(
+      filePath,
+      get().recentFiles,
+      doc.documentType,
+      get().maxRecentFiles,
+    );
     const xmlCache = {
       ...getRecentFileCache(),
       [filePath]: xml,
@@ -352,7 +367,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     for (const file of files) {
       try {
         const doc = parseXml(file.content);
-        recentFiles = buildRecentFiles(file.id, recentFiles, currentMax);
+        recentFiles = buildRecentFiles(
+          file.id,
+          recentFiles,
+          doc.documentType,
+          currentMax,
+        );
         xmlCache[file.id] = file.content;
         lastDoc = doc;
         lastXml = file.content;

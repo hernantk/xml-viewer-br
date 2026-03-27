@@ -6,7 +6,6 @@ export function usePdfExport() {
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
-  const currentFilePath = useDocumentStore((s) => s.currentFilePath);
 
   const exportPdf = useCallback(async () => {
     if (!currentDocument) return;
@@ -71,78 +70,15 @@ export function usePdfExport() {
     } finally {
       setExporting(false);
     }
-  }, [currentDocument, currentFilePath]);
+  }, [currentDocument]);
 
   const printPdf = useCallback(async () => {
     if (!currentDocument) return;
 
     setPrinting(true);
     try {
-      const viewerEl = document.getElementById("document-viewer-content");
-      if (!viewerEl) {
-        throw new Error("Elemento do viewer não encontrado");
-      }
-
-      const docType = currentDocument.documentType;
-      let defaultName = "documento";
-      if (docType === "nfe" && currentDocument.nfe) {
-        const nfe = currentDocument.nfe;
-        const nNF = nfe.infNFe.ide.nNF;
-        const serie = nfe.infNFe.ide.serie;
-        defaultName = `DANFE_${nNF}_serie${serie}`;
-      } else if (docType === "cte" && currentDocument.cte) {
-        const cte = currentDocument.cte;
-        const nCT = cte.infCte.ide.nCT;
-        defaultName = `DACTe_${nCT}`;
-      } else if (docType === "nfse" && currentDocument.nfse) {
-        const nfse = currentDocument.nfse;
-        const numero = nfse.nfse.infNfse.numero;
-        defaultName = `NFSe_${numero}`;
-      }
-
-      const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
-
-      // Try Tauri: save to temp and open with system PDF viewer
-      let handled = false;
-      try {
-        const { writeFile } = await import("@tauri-apps/plugin-fs");
-        const { tempDir } = await import("@tauri-apps/api/path");
-        const { openPath } = await import("@tauri-apps/plugin-opener");
-        const tempDirPath = await tempDir();
-        const filePath = `${tempDirPath}${defaultName}.pdf`;
-        await writeFile(filePath, pdfBytes);
-        await openPath(filePath);
-        handled = true;
-      } catch (e) {
-        console.error("Tauri print failed, using fallback:", e);
-      }
-
-      if (!handled) {
-        // Browser fallback: iframe print
-        const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-
-        const printFrame = document.createElement("iframe");
-        printFrame.style.position = "fixed";
-        printFrame.style.left = "-9999px";
-        printFrame.style.top = "-9999px";
-        printFrame.style.width = "0";
-        printFrame.style.height = "0";
-        printFrame.src = url;
-        document.body.appendChild(printFrame);
-
-        printFrame.onload = () => {
-          try {
-            printFrame.contentWindow?.print();
-          } catch {
-            window.open(url, "_blank");
-          }
-          setTimeout(() => {
-            document.body.removeChild(printFrame);
-            URL.revokeObjectURL(url);
-          }, 1000);
-        };
-      }
+      // Use native print dialog (works in both browser and Tauri WebView2)
+      window.print();
     } catch (err) {
       console.error("Erro ao imprimir:", err);
       alert(
@@ -152,7 +88,7 @@ export function usePdfExport() {
     } finally {
       setPrinting(false);
     }
-  }, [currentDocument, currentFilePath]);
+  }, [currentDocument]);
 
   return { exportPdf, exporting, printPdf, printing };
 }
