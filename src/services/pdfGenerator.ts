@@ -18,17 +18,44 @@ const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - MARGIN_MM * 2;
 // Scale for high-quality capture
 const CAPTURE_SCALE = 3;
 
+function createCanvasSlice(
+  sourceCanvas: HTMLCanvasElement,
+  sourceY: number,
+  sourceHeight: number,
+) {
+  const sliceCanvas = document.createElement("canvas");
+  sliceCanvas.width = sourceCanvas.width;
+  sliceCanvas.height = sourceHeight;
+
+  const ctx = sliceCanvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+    ctx.drawImage(
+      sourceCanvas,
+      0,
+      sourceY,
+      sourceCanvas.width,
+      sourceHeight,
+      0,
+      0,
+      sourceCanvas.width,
+      sourceHeight,
+    );
+  }
+
+  return sliceCanvas;
+}
+
 export async function generatePdfFromElement(
   element: HTMLElement,
   _filename: string,
 ): Promise<Uint8Array> {
   const { html2canvas, jsPDF } = await loadDeps();
 
-  // Clone the element to manipulate styles without affecting the UI
   const clone = element.cloneNode(true) as HTMLElement;
 
-  // Set explicit styles for consistent PDF rendering
-  clone.style.width = "794px"; // A4 width at 96dpi
+  clone.style.width = "794px";
   clone.style.backgroundColor = "#ffffff";
   clone.style.color = "#000000";
   clone.style.position = "absolute";
@@ -36,18 +63,17 @@ export async function generatePdfFromElement(
   clone.style.top = "0";
   clone.style.padding = "0";
   clone.style.margin = "0";
-  clone.style.lineHeight = "1.8"; // Aumenta o espaçamento entre linhas
+  clone.style.lineHeight = "1.8";
 
-  // Força o line-height e padding vertical em todos os elementos relevantes
-  const allElements = clone.querySelectorAll('tr, td, th, div, span, p, li');
+  const allElements = clone.querySelectorAll("tr, td, th, div, span, p, li, section");
   allElements.forEach((el) => {
     if (el instanceof HTMLElement) {
-      el.style.lineHeight = '1.8em';
+      el.style.lineHeight = "1.8em";
     }
   });
 
-  // Remove dark mode classes from clone
   removeDarkClasses(clone);
+  prepareCloneForPdf(clone);
 
   document.body.appendChild(clone);
 
@@ -69,17 +95,12 @@ export async function generatePdfFromElement(
     });
 
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
-
-    // Calculate dimensions to fit A4
     const canvasWidthPx = canvas.width;
     const canvasHeightPx = canvas.height;
-
-    // The content should fill the A4 width (minus margins)
     const ratio = CONTENT_WIDTH_MM / (canvasWidthPx / CAPTURE_SCALE);
     const totalHeightMM = (canvasHeightPx / CAPTURE_SCALE) * ratio;
 
     if (totalHeightMM <= CONTENT_HEIGHT_MM) {
-      // Fits in a single page
       pdf.addImage(
         imgData,
         "JPEG",
@@ -89,9 +110,7 @@ export async function generatePdfFromElement(
         totalHeightMM,
       );
     } else {
-      // Multi-page: slice the canvas into page-sized chunks
-      const pageHeightPx =
-        (CONTENT_HEIGHT_MM / ratio) * CAPTURE_SCALE;
+      const pageHeightPx = (CONTENT_HEIGHT_MM / ratio) * CAPTURE_SCALE;
       const totalPages = Math.ceil(canvasHeightPx / pageHeightPx);
 
       for (let page = 0; page < totalPages; page++) {
@@ -99,40 +118,13 @@ export async function generatePdfFromElement(
           pdf.addPage();
         }
 
-        // Create a slice of the canvas for this page
         const sliceY = page * pageHeightPx;
-        const sliceHeight = Math.min(
-          pageHeightPx,
-          canvasHeightPx - sliceY,
-        );
-
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width = canvasWidthPx;
-        pageCanvas.height = sliceHeight;
-
-        const ctx = pageCanvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          ctx.drawImage(
-            canvas,
-            0,
-            sliceY,
-            canvasWidthPx,
-            sliceHeight,
-            0,
-            0,
-            canvasWidthPx,
-            sliceHeight,
-          );
-        }
-
-        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-        const pageContentHeight =
-          (sliceHeight / CAPTURE_SCALE) * ratio;
+        const sliceHeight = Math.min(pageHeightPx, canvasHeightPx - sliceY);
+        const pageCanvas = createCanvasSlice(canvas, sliceY, sliceHeight);
+        const pageContentHeight = (sliceHeight / CAPTURE_SCALE) * ratio;
 
         pdf.addImage(
-          pageImgData,
+          pageCanvas.toDataURL("image/jpeg", 0.95),
           "JPEG",
           MARGIN_MM,
           MARGIN_MM,
@@ -142,11 +134,9 @@ export async function generatePdfFromElement(
       }
     }
 
-    // Return as Uint8Array
     const arrayBuffer = pdf.output("arraybuffer");
     return new Uint8Array(arrayBuffer);
   } catch (err) {
-    // Clean up clone if still attached
     if (clone.parentNode) {
       document.body.removeChild(clone);
     }
@@ -154,15 +144,23 @@ export async function generatePdfFromElement(
   }
 }
 
+function prepareCloneForPdf(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>(".pdf-hidden").forEach((el) => {
+    el.style.display = "none";
+  });
+
+  root.querySelectorAll<HTMLElement>(".pdf-only").forEach((el) => {
+    el.style.display = "block";
+  });
+}
+
 function removeDarkClasses(el: HTMLElement) {
-  // Remove dark: prefixed classes and ensure light mode
   if (el.classList) {
     const darkClasses = Array.from(el.classList).filter((c) =>
       c.startsWith("dark:"),
     );
     darkClasses.forEach((c) => el.classList.remove(c));
 
-    // Replace dark background/text classes
     el.classList.remove("dark");
     if (el.classList.contains("bg-gray-900")) {
       el.classList.remove("bg-gray-900");
@@ -190,7 +188,6 @@ function removeDarkClasses(el: HTMLElement) {
     }
   }
 
-  // Recursively process children
   for (let i = 0; i < el.children.length; i++) {
     const child = el.children[i];
     if (child instanceof HTMLElement) {
