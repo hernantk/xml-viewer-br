@@ -32,14 +32,18 @@ export function DocumentViewer() {
 
   if (!doc) return null;
 
+  let viewer = null;
   switch (doc.documentType) {
     case "nfe":
-      return doc.nfe ? <DANFEViewer nfe={doc.nfe} /> : null;
+      viewer = doc.nfe ? <DANFEViewer nfe={doc.nfe} /> : null;
+      break;
     case "cte":
-      return doc.cte ? <DACTeViewer cte={doc.cte} /> : null;
+      viewer = doc.cte ? <DACTeViewer cte={doc.cte} /> : null;
+      break;
     case "nfse":
-      return doc.nfse ? <NFSeViewer nfse={doc.nfse} /> : null;
-    default:
-      return null;
+      viewer = doc.nfse ? <NFSeViewer nfse={doc.nfse} /> : null;
+      break;
   }
+
+  return <div id="document-viewer-content">{viewer}</div>;
 }
