@@ -12,7 +12,7 @@ interface DocumentState {
   loading: boolean;
   error: string | null;
 
-  loadFile: (filePath: string, xmlContent?: string) => void;
+  loadFile: (filePath: string, xmlContent?: string) => Promise<void>;
   setDocument: (doc: ParsedDocument, xml: string, filePath: string) => void;
   setValidation: (v: ValidationResult) => void;
   clearDocument: () => void;
@@ -22,6 +22,33 @@ interface DocumentState {
 }
 
 const MAX_RECENT_FILES = 10;
+
+function isTauriRuntime(): boolean {
+  const tauriWindow = window as Window & {
+    __TAURI_INTERNALS__?: { invoke?: unknown };
+  };
+
+  return (
+    typeof window !== "undefined" &&
+    typeof tauriWindow.__TAURI_INTERNALS__ === "object" &&
+    typeof tauriWindow.__TAURI_INTERNALS__.invoke === "function"
+  );
+}
+
+function canReopenRecentFile(filePath: string): boolean {
+  return /[\\/]/.test(filePath);
+}
+
+function buildRecentFiles(currentFilePath: string, recentFiles: string[]): string[] {
+  if (!canReopenRecentFile(currentFilePath)) {
+    return recentFiles.filter(canReopenRecentFile).slice(0, MAX_RECENT_FILES);
+  }
+
+  return [
+    currentFilePath,
+    ...recentFiles.filter((filePath) => filePath !== currentFilePath),
+  ].slice(0, MAX_RECENT_FILES);
+}
 
 function getInitialTheme(): "light" | "dark" {
   try {
@@ -36,7 +63,7 @@ function getInitialTheme(): "light" | "dark" {
 function getRecentFiles(): string[] {
   try {
     const saved = localStorage.getItem("xmlviewer-recent");
-    if (saved) return JSON.parse(saved);
+    if (saved) return JSON.parse(saved).filter(canReopenRecentFile);
   } catch {
     /* ignore */
   }
@@ -53,28 +80,35 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   loading: false,
   error: null,
 
-  loadFile: (filePath: string, xmlContent?: string) => {
+  loadFile: async (filePath: string, xmlContent?: string) => {
     set({ loading: true, error: null });
 
     try {
-      if (xmlContent) {
-        const doc = parseXml(xmlContent);
-        const recent = [
-          filePath,
-          ...get().recentFiles.filter((f) => f !== filePath),
-        ].slice(0, MAX_RECENT_FILES);
-        localStorage.setItem("xmlviewer-recent", JSON.stringify(recent));
+      let content = xmlContent;
+      if (!content) {
+        if (!isTauriRuntime()) {
+          throw new Error(
+            "Esse arquivo recente so pode ser reaberto no app desktop.",
+          );
+        }
 
-        set({
-          currentDocument: doc,
-          currentXml: xmlContent,
-          currentFilePath: filePath,
-          recentFiles: recent,
-          loading: false,
-          error: null,
-          validation: null,
-        });
+        const { readTextFile } = await import("@tauri-apps/plugin-fs");
+        content = await readTextFile(filePath);
       }
+
+      const doc = parseXml(content);
+      const recent = buildRecentFiles(filePath, get().recentFiles);
+      localStorage.setItem("xmlviewer-recent", JSON.stringify(recent));
+
+      set({
+        currentDocument: doc,
+        currentXml: content,
+        currentFilePath: filePath,
+        recentFiles: recent,
+        loading: false,
+        error: null,
+        validation: null,
+      });
     } catch (e) {
       set({
         loading: false,
@@ -84,10 +118,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   setDocument: (doc, xml, filePath) => {
-    const recent = [
-      filePath,
-      ...get().recentFiles.filter((f) => f !== filePath),
-    ].slice(0, MAX_RECENT_FILES);
+    const recent = buildRecentFiles(filePath, get().recentFiles);
     localStorage.setItem("xmlviewer-recent", JSON.stringify(recent));
     set({
       currentDocument: doc,
