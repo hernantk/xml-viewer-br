@@ -176,14 +176,25 @@ fn parse_imp_cte(el: &roxmltree::Node) -> ImpCte {
 }
 
 fn parse_inf_cte_norm(el: &roxmltree::Node) -> InfCTeNorm {
-    let inf_carga_el = find_child(el, "infCarga").unwrap();
+    let inf_carga_el = find_child(el, "infCarga");
     let inf_doc_el = find_child(el, "infDoc");
     let inf_modal_el = find_child(el, "infModal");
+    let rodo_direct = find_child(el, "rodo");
 
     InfCTeNorm {
-        inf_carga: parse_inf_carga(&inf_carga_el),
+        inf_carga: inf_carga_el.map(|c| parse_inf_carga(&c)).unwrap_or(InfCarga {
+            v_carga: None,
+            pro_pred: String::new(),
+            x_out_cat: None,
+            inf_q: vec![],
+        }),
         inf_doc: inf_doc_el.map(|d| parse_inf_doc(&d)),
-        inf_modal: inf_modal_el.map(|m| parse_inf_modal(&m)),
+        inf_modal: inf_modal_el.map(|m| parse_inf_modal(&m)).or_else(|| {
+            rodo_direct.map(|r| InfModal {
+                versao_modal: String::new(),
+                rodo: Some(RodoModal { rntrc: get_text(&r, "RNTRC") }),
+            })
+        }),
     }
 }
 

@@ -1,4 +1,7 @@
 mod commands;
+pub mod error;
+pub mod models;
+pub mod parser;
 
 use std::path::Path;
 use std::sync::Mutex;

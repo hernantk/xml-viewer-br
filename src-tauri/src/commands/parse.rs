@@ -1,10 +1,33 @@
 use crate::PendingOpenPaths;
+use crate::error::AppError;
+use crate::models::common::{DocumentType, ParsedDocument};
+use crate::parser;
 use tauri::State;
-use xml_fiscal_core::{parse_document as parse_xml_document, AppError, ParsedDocument};
 
 #[tauri::command]
 pub fn parse_document(xml: String) -> Result<ParsedDocument, AppError> {
-    parse_xml_document(&xml)
+    let doc_type = parser::detector::detect_type(&xml)?;
+
+    match doc_type {
+        DocumentType::Nfe => Ok(ParsedDocument {
+            document_type: DocumentType::Nfe,
+            nfe: Some(parser::nfe_parser::parse(&xml)?),
+            cte: None,
+            nfse: None,
+        }),
+        DocumentType::Cte => Ok(ParsedDocument {
+            document_type: DocumentType::Cte,
+            nfe: None,
+            cte: Some(parser::cte_parser::parse(&xml)?),
+            nfse: None,
+        }),
+        DocumentType::Nfse => Ok(ParsedDocument {
+            document_type: DocumentType::Nfse,
+            nfe: None,
+            cte: None,
+            nfse: Some(parser::nfse_parser::parse(&xml)?),
+        }),
+    }
 }
 
 #[tauri::command]

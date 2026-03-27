@@ -6,8 +6,8 @@ pub fn parse(xml: &str) -> Result<CompNfse, AppError> {
     let doc = roxmltree::Document::parse(xml)?;
     let root = doc.root_element();
 
-    // Find InfNfse - could be deeply nested
-    let inf_nfse = find_descendant(&root, "InfNfse")
+    // Find InfNfse - try multiple casing variants (municipalities differ)
+    let inf_nfse = find_descendant_ci(&root, &["InfNfse", "InfNFSe", "infNfse", "infNFSe"])
         .ok_or_else(|| AppError::XmlParseError("Elemento InfNfse não encontrado".into()))?;
 
     Ok(CompNfse {
@@ -17,8 +17,17 @@ pub fn parse(xml: &str) -> Result<CompNfse, AppError> {
     })
 }
 
-fn find_descendant<'a>(node: &'a roxmltree::Node<'a, 'a>, name: &str) -> Option<roxmltree::Node<'a, 'a>> {
-    node.descendants().find(|n| n.has_tag_name(name))
+/// Case-insensitive descendant search: try each name variant
+fn find_descendant_ci<'a>(node: &'a roxmltree::Node<'a, 'a>, names: &[&str]) -> Option<roxmltree::Node<'a, 'a>> {
+    for name in names {
+        if let Some(n) = node.descendants().find(|n| n.has_tag_name(*name)) {
+            return Some(n);
+        }
+    }
+    // Fallback: true case-insensitive match
+    node.descendants().find(|n| {
+        n.is_element() && n.tag_name().name().eq_ignore_ascii_case("infnfse")
+    })
 }
 
 fn parse_inf_nfse(el: &roxmltree::Node) -> Result<InfNfse, AppError> {
@@ -29,31 +38,150 @@ fn parse_inf_nfse(el: &roxmltree::Node) -> Result<InfNfse, AppError> {
     let dps_el = find_child(el, "DeclaracaoPrestacaoServico");
     let valores_nfse_el = find_child(el, "ValoresNfse");
 
+    // Some municipalities put Servico directly in InfNfse instead of inside DPS
+    let servico_direct = find_child(el, "Servico");
+
+    // Build ValoresNfse: try dedicated element first, then extract from Servico/Valores
+    let valores_nfse = if let Some(v) = valores_nfse_el {
+        ValoresNfse {
+            base_calculo: get_text(&v, "BaseCalculo"),
+            aliquota: get_text_opt(&v, "Aliquota"),
+            valor_iss: get_text_opt(&v, "ValorIss"),
+            valor_liquido_nfse: get_text(&v, "ValorLiquidoNfse"),
+        }
+    } else if let Some(ref srv) = servico_direct {
+        // Fallback: derive from Servico > Valores
+        if let Some(vals) = find_child(srv, "Valores") {
+            ValoresNfse {
+                base_calculo: get_text_opt(&vals, "BaseCalculo")
+                    .unwrap_or_else(|| get_text(&vals, "ValorServicos")),
+                aliquota: get_text_opt(&vals, "Aliquota"),
+                valor_iss: get_text_opt(&vals, "ValorIss"),
+                valor_liquido_nfse: get_text_opt(&vals, "ValorLiquidoNfse")
+                    .unwrap_or_else(|| get_text(&vals, "ValorServicos")),
+            }
+        } else {
+            default_valores_nfse()
+        }
+    } else {
+        default_valores_nfse()
+    };
+
+    // Build DPS: try parsing the DPS element. If it fails (incomplete DPS), synthesize from direct Servico.
+    let declaracao = if let Some(d) = dps_el {
+        parse_dps(&d).ok()
+    } else {
+        None
+    };
+
+    let declaracao = declaracao.or_else(|| {
+        servico_direct.as_ref().map(|srv| {
+            let valores_el = find_child(srv, "Valores");
+            DeclaracaoPrestacaoServico {
+                inf_declaracao_prestacao_servico: InfDeclaracaoPrestacaoServico {
+                    competencia: get_text_opt(el, "Competencia"),
+                    servico: parse_servico(srv, &valores_el),
+                    prestador: PrestadorRef {
+                        cnpj: extract_cnpj(&prestador_el, "IdentificacaoPrestador"),
+                        inscricao_municipal: find_child(&prestador_el, "IdentificacaoPrestador")
+                            .and_then(|i| get_text_opt(&i, "InscricaoMunicipal")),
+                    },
+                    tomador: tomador_el.as_ref().map(|t| parse_tomador(t)),
+                    optante_simples_nacional: get_text_opt(el, "OptanteSimplesNacional"),
+                    incentivo_fiscal: get_text_opt(el, "IncentivadorCultural")
+                        .or_else(|| get_text_opt(el, "IncentivoFiscal")),
+                },
+            }
+        })
+    });
+
     Ok(InfNfse {
         numero: get_text(el, "Numero"),
         codigo_verificacao: get_text(el, "CodigoVerificacao"),
         data_emissao: get_text(el, "DataEmissao"),
         nfse_substituida: get_text_opt(el, "NfseSubstituida"),
         outras_informacoes: get_text_opt(el, "OutrasInformacoes"),
-        valores_nfse: valores_nfse_el.map(|v| ValoresNfse {
-            base_calculo: get_text(&v, "BaseCalculo"),
-            aliquota: get_text_opt(&v, "Aliquota"),
-            valor_iss: get_text_opt(&v, "ValorIss"),
-            valor_liquido_nfse: get_text(&v, "ValorLiquidoNfse"),
-        }).unwrap_or(ValoresNfse {
-            base_calculo: String::from("0"),
-            aliquota: None,
-            valor_iss: None,
-            valor_liquido_nfse: String::from("0"),
-        }),
+        valores_nfse,
         prestador_servico: parse_prestador(&prestador_el),
         tomador_servico: tomador_el.map(|t| parse_tomador(&t)),
         orgao_gerador: orgao_el.map(|o| OrgaoGerador {
             codigo_municipio: get_text(&o, "CodigoMunicipio"),
             uf: get_text(&o, "Uf"),
         }),
-        declaracao_prestacao_servico: dps_el.map(|d| parse_dps(&d)).transpose()?,
+        declaracao_prestacao_servico: declaracao,
     })
+}
+
+fn default_valores_nfse() -> ValoresNfse {
+    ValoresNfse {
+        base_calculo: String::from("0"),
+        aliquota: None,
+        valor_iss: None,
+        valor_liquido_nfse: String::from("0"),
+    }
+}
+
+fn parse_servico(servico_el: &roxmltree::Node, valores_el: &Option<roxmltree::Node>) -> Servico {
+    let valores = valores_el.as_ref().map(|v| ValoresServico {
+        valor_servicos: get_text(v, "ValorServicos"),
+        valor_deducoes: get_text_opt(v, "ValorDeducoes"),
+        valor_pis: get_text_opt(v, "ValorPis"),
+        valor_cofins: get_text_opt(v, "ValorCofins"),
+        valor_inss: get_text_opt(v, "ValorInss"),
+        valor_ir: get_text_opt(v, "ValorIr"),
+        valor_csll: get_text_opt(v, "ValorCsll"),
+        iss_retido: get_text_opt(v, "IssRetido"),
+        valor_iss: get_text_opt(v, "ValorIss"),
+        valor_iss_retido: get_text_opt(v, "ValorIssRetido"),
+        outras_retencoes: get_text_opt(v, "OutrasRetencoes"),
+        base_calculo: get_text_opt(v, "BaseCalculo"),
+        aliquota: get_text_opt(v, "Aliquota"),
+        valor_liquido_nfse: get_text_opt(v, "ValorLiquidoNfse"),
+        desconto_incondicionado: get_text_opt(v, "DescontoIncondicionado"),
+        desconto_condicionado: get_text_opt(v, "DescontoCondicionado"),
+    }).unwrap_or(ValoresServico {
+        valor_servicos: String::new(), valor_deducoes: None, valor_pis: None,
+        valor_cofins: None, valor_inss: None, valor_ir: None, valor_csll: None,
+        iss_retido: None, valor_iss: None, valor_iss_retido: None,
+        outras_retencoes: None, base_calculo: None, aliquota: None,
+        valor_liquido_nfse: None, desconto_incondicionado: None,
+        desconto_condicionado: None,
+    });
+
+    Servico {
+        valores,
+        item_lista_servico: get_text(servico_el, "ItemListaServico"),
+        codigo_cnae: get_text_opt(servico_el, "CodigoCnae"),
+        codigo_tributacao_municipio: get_text_opt(servico_el, "CodigoTributacaoMunicipio"),
+        discriminacao: get_text(servico_el, "Discriminacao"),
+        codigo_municipio: get_text(servico_el, "CodigoMunicipio"),
+    }
+}
+
+/// Extract CNPJ handling the <CpfCnpj><Cnpj>...</Cnpj></CpfCnpj> nesting pattern
+fn extract_cnpj_from_ident(ident: &roxmltree::Node) -> (Option<String>, Option<String>) {
+    let cnpj = get_text_opt(ident, "Cnpj");
+    let cpf = get_text_opt(ident, "Cpf");
+
+    if cnpj.is_some() || cpf.is_some() {
+        return (cnpj, cpf);
+    }
+
+    // Try <CpfCnpj> wrapper (common ABRASF pattern)
+    if let Some(wrapper) = find_child(ident, "CpfCnpj") {
+        return (get_text_opt(&wrapper, "Cnpj"), get_text_opt(&wrapper, "Cpf"));
+    }
+
+    (None, None)
+}
+
+fn extract_cnpj(parent: &roxmltree::Node, ident_name: &str) -> String {
+    find_child(parent, ident_name)
+        .and_then(|i| {
+            let (cnpj, _) = extract_cnpj_from_ident(&i);
+            cnpj
+        })
+        .unwrap_or_default()
 }
 
 fn parse_endereco_nfse(el: &roxmltree::Node) -> EnderecoNfse {
@@ -80,9 +208,13 @@ fn parse_prestador(el: &roxmltree::Node) -> PrestadorServico {
     let endereco_el = find_child(el, "Endereco");
     let contato_el = find_child(el, "Contato");
 
+    let (cnpj, _) = ident_el.as_ref()
+        .map(|i| extract_cnpj_from_ident(i))
+        .unwrap_or((None, None));
+
     PrestadorServico {
         identificacao_prestador: ident_el.map(|i| IdentificacaoPrestador {
-            cnpj: { let v = get_text(&i, "Cnpj"); if v.is_empty() { get_text(&i, "CpfCnpj") } else { v } },
+            cnpj: cnpj.clone().unwrap_or_default(),
             inscricao_municipal: get_text_opt(&i, "InscricaoMunicipal"),
         }).unwrap_or(IdentificacaoPrestador {
             cnpj: String::new(),
@@ -103,10 +235,14 @@ fn parse_tomador(el: &roxmltree::Node) -> TomadorServico {
     let endereco_el = find_child(el, "Endereco");
     let contato_el = find_child(el, "Contato");
 
+    let (cnpj, cpf) = ident_el.as_ref()
+        .map(|i| extract_cnpj_from_ident(i))
+        .unwrap_or((None, None));
+
     TomadorServico {
         identificacao_tomador: ident_el.map(|i| IdentificacaoTomador {
-            cnpj: get_text_opt(&i, "Cnpj"),
-            cpf: get_text_opt(&i, "Cpf"),
+            cnpj,
+            cpf,
             inscricao_municipal: get_text_opt(&i, "InscricaoMunicipal"),
         }),
         razao_social: get_text(el, "RazaoSocial"),
@@ -131,31 +267,7 @@ fn parse_dps(el: &roxmltree::Node) -> Result<DeclaracaoPrestacaoServico, AppErro
     Ok(DeclaracaoPrestacaoServico {
         inf_declaracao_prestacao_servico: InfDeclaracaoPrestacaoServico {
             competencia: get_text_opt(&inf_el, "Competencia"),
-            servico: Servico {
-                valores: ValoresServico {
-                    valor_servicos: get_text(&valores_el, "ValorServicos"),
-                    valor_deducoes: get_text_opt(&valores_el, "ValorDeducoes"),
-                    valor_pis: get_text_opt(&valores_el, "ValorPis"),
-                    valor_cofins: get_text_opt(&valores_el, "ValorCofins"),
-                    valor_inss: get_text_opt(&valores_el, "ValorInss"),
-                    valor_ir: get_text_opt(&valores_el, "ValorIr"),
-                    valor_csll: get_text_opt(&valores_el, "ValorCsll"),
-                    iss_retido: get_text_opt(&valores_el, "IssRetido"),
-                    valor_iss: get_text_opt(&valores_el, "ValorIss"),
-                    valor_iss_retido: get_text_opt(&valores_el, "ValorIssRetido"),
-                    outras_retencoes: get_text_opt(&valores_el, "OutrasRetencoes"),
-                    base_calculo: get_text_opt(&valores_el, "BaseCalculo"),
-                    aliquota: get_text_opt(&valores_el, "Aliquota"),
-                    valor_liquido_nfse: get_text_opt(&valores_el, "ValorLiquidoNfse"),
-                    desconto_incondicionado: get_text_opt(&valores_el, "DescontoIncondicionado"),
-                    desconto_condicionado: get_text_opt(&valores_el, "DescontoCondicionado"),
-                },
-                item_lista_servico: get_text(&servico_el, "ItemListaServico"),
-                codigo_cnae: get_text_opt(&servico_el, "CodigoCnae"),
-                codigo_tributacao_municipio: get_text_opt(&servico_el, "CodigoTributacaoMunicipio"),
-                discriminacao: get_text(&servico_el, "Discriminacao"),
-                codigo_municipio: get_text(&servico_el, "CodigoMunicipio"),
-            },
+            servico: parse_servico(&servico_el, &Some(valores_el)),
             prestador: PrestadorRef {
                 cnpj: { let v = get_text(&prestador_el, "Cnpj"); if v.is_empty() { get_text(&prestador_el, "CpfCnpj") } else { v } },
                 inscricao_municipal: get_text_opt(&prestador_el, "InscricaoMunicipal"),
@@ -166,4 +278,3 @@ fn parse_dps(el: &roxmltree::Node) -> Result<DeclaracaoPrestacaoServico, AppErro
         },
     })
 }
-

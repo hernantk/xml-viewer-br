@@ -9,8 +9,14 @@ pub fn detect_type(xml: &str) -> Result<DocumentType, AppError> {
     if xml.contains("cteProc") || xml.contains("infCte") || xml.contains("portalfiscal.inf.br/cte") {
         return Ok(DocumentType::Cte);
     }
-    if xml.contains("CompNfse") || xml.contains("InfNfse") || xml.contains("abrasf") {
-        return Ok(DocumentType::Nfse);
+    // NFS-e: different municipalities use varied casing/tags
+    {
+        let lower = xml.to_ascii_lowercase();
+        if xml.contains("CompNfse") || xml.contains("InfNfse") || xml.contains("InfNFSe")
+            || xml.contains("abrasf") || lower.contains("<nfse") || lower.contains("<infnfse")
+        {
+            return Ok(DocumentType::Nfse);
+        }
     }
 
     Err(AppError::UnknownDocumentType)
