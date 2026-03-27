@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useDocumentStore } from "@/store/documentStore";
+import { createMemoryFileId, useDocumentStore } from "@/store/documentStore";
 
 export function useFileOpen() {
   const loadFile = useDocumentStore((s) => s.loadFile);
@@ -27,7 +27,7 @@ export function useFileOpen() {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
           const text = await file.text();
-          loadFile(file.name, text);
+          loadFile(createMemoryFileId(file.name), text);
         }
       };
       input.click();

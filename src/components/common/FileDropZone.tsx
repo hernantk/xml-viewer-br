@@ -6,7 +6,7 @@ import {
   useRef,
 } from "react";
 import { Upload } from "lucide-react";
-import { useDocumentStore } from "@/store/documentStore";
+import { createMemoryFileId, useDocumentStore } from "@/store/documentStore";
 
 interface FileDropZoneProps {
   children: ReactNode;
@@ -61,7 +61,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
 
       try {
         const text = await file.text();
-        loadFile(file.name, text);
+        loadFile(createMemoryFileId(file.name), text);
       } catch (error) {
         setError(
           error instanceof Error
