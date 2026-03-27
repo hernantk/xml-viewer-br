@@ -49,3 +49,23 @@ export interface ParsedDocument {
   cte?: import("./cte").Cte;
   nfse?: import("./nfse").CompNfse;
 }
+
+export interface BatchProgress {
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+}
+
+export interface BatchSummary {
+  sourceDir: string;
+  outputPath: string | null;
+  totalFound: number;
+  generated: number;
+  skipped: number;
+}
+
+export interface BatchErrorItem {
+  fileName: string;
+  reason: string;
+}

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDocumentStore } from "@/store/documentStore";
 import { generatePdfFromElement } from "@/services/pdfGenerator";
+import { getPdfBaseName } from "@/utils/documentFileNames";
 
 export function usePdfExport() {
   const [exporting, setExporting] = useState(false);
@@ -18,22 +19,7 @@ export function usePdfExport() {
         throw new Error("Elemento do viewer não encontrado");
       }
 
-      const docType = currentDocument.documentType;
-      let defaultName = "documento";
-      if (docType === "nfe" && currentDocument.nfe) {
-        const nfe = currentDocument.nfe;
-        const nNF = nfe.infNFe.ide.nNF;
-        const serie = nfe.infNFe.ide.serie;
-        defaultName = `DANFE_${nNF}_serie${serie}`;
-      } else if (docType === "cte" && currentDocument.cte) {
-        const cte = currentDocument.cte;
-        const nCT = cte.infCte.ide.nCT;
-        defaultName = `DACTe_${nCT}`;
-      } else if (docType === "nfse" && currentDocument.nfse) {
-        const nfse = currentDocument.nfse;
-        const numero = nfse.nfse.infNfse.numero;
-        defaultName = `NFSe_${numero}`;
-      }
+      const defaultName = getPdfBaseName(currentDocument);
 
       const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
 
@@ -78,7 +64,7 @@ export function usePdfExport() {
     } finally {
       setExporting(false);
     }
-  }, [currentDocument]);
+  }, [currentDocument, downloadDir]);
 
   const printPdf = useCallback(async () => {
     if (!currentDocument) return;

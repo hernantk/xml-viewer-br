@@ -3,6 +3,7 @@ import {
   FolderOpen,
   FileDown,
   Printer,
+  Files,
   ShieldCheck,
   PanelLeftClose,
   PanelLeft,
@@ -14,6 +15,9 @@ import { useDocumentStore } from "@/store/documentStore";
 import { useFileOpen } from "@/hooks/useFileOpen";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { SettingsModal } from "@/components/common/SettingsModal";
+import { BatchPdfModal } from "@/components/common/BatchPdfModal";
+import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
+import { isTauriRuntime } from "@/utils/runtime";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -26,8 +30,11 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
   const toggleTheme = useDocumentStore((s) => s.toggleTheme);
+  const downloadDir = useDocumentStore((s) => s.downloadDir);
   const { openFile, importNotice } = useFileOpen();
   const { exportPdf, exporting, printPdf, printing } = usePdfExport();
+  const batchPdf = useBatchPdfExport({ initialOutputDir: downloadDir });
+  const showBatchButton = isTauriRuntime();
 
   return (
     <>
@@ -50,6 +57,17 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
         <FolderOpen size={16} />
         Abrir
       </button>
+
+      {showBatchButton && (
+        <button
+          onClick={batchPdf.openModal}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          title="Gerar PDFs em lote"
+        >
+          <Files size={16} />
+          Lote PDF
+        </button>
+      )}
 
       {currentDocument && (
         <>
@@ -118,6 +136,27 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
       </button>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <BatchPdfModal
+        open={batchPdf.isOpen}
+        isRunning={batchPdf.isRunning}
+        sourceDir={batchPdf.sourceDir}
+        outputDir={batchPdf.outputDir}
+        zipFileName={batchPdf.zipFileName}
+        progress={batchPdf.progress}
+        currentFileName={batchPdf.currentFileName}
+        summary={batchPdf.summary}
+        errors={batchPdf.errors}
+        validationMessage={batchPdf.validationMessage}
+        sourceFileCount={batchPdf.sourceFileCount}
+        batchDocument={batchPdf.batchDocument}
+        canRun={batchPdf.canRun}
+        onClose={batchPdf.closeModal}
+        onPickSourceDir={batchPdf.pickSourceDir}
+        onPickOutputDir={batchPdf.pickOutputDir}
+        onRunBatch={batchPdf.runBatch}
+        onZipFileNameChange={batchPdf.setZipFileName}
+        onOutputDirChange={batchPdf.setOutputDir}
+      />
     </header>
     {importNotice && (
       <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">

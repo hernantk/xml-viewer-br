@@ -5669,6 +5669,16 @@ dependencies = [
  "tauri-plugin-single-instance",
  "thiserror 2.0.18",
  "windows-sys 0.61.2",
+ "xml_fiscal_core",
+]
+
+[[package]]
+name = "xml_fiscal_core"
+version = "0.1.0"
+dependencies = [
+ "roxmltree",
+ "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

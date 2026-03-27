@@ -1,7 +1,4 @@
 mod commands;
-mod error;
-mod models;
-mod parser;
 
 use std::path::Path;
 use std::sync::Mutex;
