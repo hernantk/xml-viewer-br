@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   FolderOpen,
   FileDown,
+  Printer,
   ShieldCheck,
   PanelLeftClose,
   PanelLeft,
@@ -26,7 +27,7 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   const theme = useDocumentStore((s) => s.theme);
   const toggleTheme = useDocumentStore((s) => s.toggleTheme);
   const { openFile, importNotice } = useFileOpen();
-  const { exportPdf, exporting } = usePdfExport();
+  const { exportPdf, exporting, printPdf, printing } = usePdfExport();
 
   return (
     <>
@@ -60,6 +61,16 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
           >
             <FileDown size={16} />
             {exporting ? "Exportando..." : "PDF"}
+          </button>
+
+          <button
+            onClick={printPdf}
+            disabled={printing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            title="Imprimir"
+          >
+            <Printer size={16} />
+            {printing ? "Imprimindo..." : "Imprimir"}
           </button>
 
           {validation && (

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="6" fill="#059669"/>
+  <path d="M9.5 8 L19.5 8 L23 11.5 L23 24 Q23 25.5 21.5 25.5 L10.5 25.5 Q9 25.5 9 24 Z" fill="#fff"/>
+  <path d="M19.5 8 L19.5 11.5 L23 11.5 Z" fill="#cbd5e1"/>
+  <path d="M5 14 L8 16 L5 18" stroke="#065f46" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M27 14 L24 16 L27 18" stroke="#065f46" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="24" cy="9" r="4" fill="#f59e0b"/>
+  <text x="24" y="11" text-anchor="middle" font-family="system-ui,sans-serif" font-size="5" font-weight="800" fill="#fff">BR</text>
+</svg>

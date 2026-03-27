@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="docGrad" x1="160" y1="80" x2="400" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="bracketGrad" x1="0" y1="200" x2="512" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <filter id="docShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    <filter id="bracketShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGrad)"/>
+
+  <!-- Subtle diamond accent (Brazilian flag nod) -->
+  <path d="M256 70 L430 256 L256 442 L82 256 Z" fill="#fbbf24" opacity="0.1"/>
+
+  <!-- Document body -->
+  <g filter="url(#docShadow)">
+    <path d="M148 96 L332 96 L384 148 L384 416 Q384 432 368 432 L164 432 Q148 432 148 416 Z" fill="url(#docGrad)"/>
+    <!-- Folded corner -->
+    <path d="M332 96 L332 148 L384 148 Z" fill="#cbd5e1"/>
+  </g>
+
+  <!-- Document lines -->
+  <rect x="188" y="188" width="160" height="10" rx="5" fill="#cbd5e1"/>
+  <rect x="188" y="216" width="120" height="10" rx="5" fill="#d4d4d8"/>
+  <rect x="188" y="244" width="140" height="10" rx="5" fill="#cbd5e1"/>
+  <rect x="188" y="316" width="156" height="10" rx="5" fill="#cbd5e1"/>
+  <rect x="188" y="344" width="100" height="10" rx="5" fill="#d4d4d8"/>
+  <rect x="188" y="372" width="130" height="10" rx="5" fill="#cbd5e1"/>
+
+  <!-- Barcode hint -->
+  <g opacity="0.35">
+    <rect x="188" y="272" width="4" height="28" rx="1" fill="#475569"/>
+    <rect x="196" y="272" width="6" height="28" rx="1" fill="#475569"/>
+    <rect x="206" y="272" width="3" height="28" rx="1" fill="#475569"/>
+    <rect x="213" y="272" width="5" height="28" rx="1" fill="#475569"/>
+    <rect x="222" y="272" width="4" height="28" rx="1" fill="#475569"/>
+    <rect x="230" y="272" width="7" height="28" rx="1" fill="#475569"/>
+    <rect x="241" y="272" width="3" height="28" rx="1" fill="#475569"/>
+    <rect x="248" y="272" width="5" height="28" rx="1" fill="#475569"/>
+    <rect x="257" y="272" width="4" height="28" rx="1" fill="#475569"/>
+    <rect x="265" y="272" width="6" height="28" rx="1" fill="#475569"/>
+    <rect x="275" y="272" width="3" height="28" rx="1" fill="#475569"/>
+    <rect x="282" y="272" width="5" height="28" rx="1" fill="#475569"/>
+    <rect x="291" y="272" width="4" height="28" rx="1" fill="#475569"/>
+    <rect x="299" y="272" width="7" height="28" rx="1" fill="#475569"/>
+    <rect x="310" y="272" width="3" height="28" rx="1" fill="#475569"/>
+    <rect x="317" y="272" width="5" height="28" rx="1" fill="#475569"/>
+    <rect x="326" y="272" width="4" height="28" rx="1" fill="#475569"/>
+    <rect x="334" y="272" width="6" height="28" rx="1" fill="#475569"/>
+    <rect x="344" y="272" width="4" height="28" rx="1" fill="#475569"/>
+  </g>
+
+  <!-- NF-e badge -->
+  <g filter="url(#bracketShadow)">
+    <rect x="172" y="126" width="72" height="36" rx="8" fill="#059669"/>
+    <text x="208" y="151" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#ffffff" letter-spacing="0.5">NF-e</text>
+  </g>
+
+  <!-- XML angle brackets overlay -->
+  <g filter="url(#bracketShadow)">
+    <!-- Left bracket < -->
+    <path d="M76 220 L128 256 L76 292" stroke="url(#bracketGrad)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Right bracket > / (closing tag) -->
+    <path d="M436 220 L384 256 L436 292" stroke="url(#bracketGrad)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Slash in right bracket -->
+    <line x1="404" y1="232" x2="416" y2="280" stroke="url(#bracketGrad)" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <!-- Small BR circle badge -->
+  <circle cx="400" cy="112" r="36" fill="#fbbf24"/>
+  <circle cx="400" cy="112" r="32" fill="#f59e0b"/>
+  <text x="400" y="119" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="800" fill="#ffffff" letter-spacing="1">BR</text>
+</svg>

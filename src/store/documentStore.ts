@@ -28,6 +28,7 @@ interface DocumentState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setMaxRecentFiles: (max: number) => void;
+  removeRecentFile: (fileId: string) => void;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
 }
 
@@ -299,6 +300,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const xmlCache = getRecentFileCache();
     persistRecentFiles(trimmed, xmlCache);
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
+  },
+
+  removeRecentFile: (fileId: string) => {
+    const updated = get().recentFiles.filter((entry) => entry.id !== fileId);
+    const xmlCache = getRecentFileCache();
+    delete xmlCache[fileId];
+    persistRecentFiles(updated, xmlCache);
+    if (get().currentFilePath === fileId) {
+      set({
+        recentFiles: updated,
+        currentDocument: null,
+        currentXml: null,
+        currentFilePath: null,
+        validation: null,
+      });
+    } else {
+      set({ recentFiles: updated });
+    }
   },
 
   loadMultipleFiles: async (files) => {
