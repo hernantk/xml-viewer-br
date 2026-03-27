@@ -18,6 +18,7 @@ interface DocumentState {
   theme: "light" | "dark";
   loading: boolean;
   error: string | null;
+  maxRecentFiles: number;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
   setDocument: (doc: ParsedDocument, xml: string, filePath: string) => void;
@@ -26,11 +27,26 @@ interface DocumentState {
   toggleTheme: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setMaxRecentFiles: (max: number) => void;
 }
 
-const MAX_RECENT_FILES = 150;
+const DEFAULT_MAX_RECENT_FILES = 300;
+const MAX_RECENT_FILES_KEY = "xmlviewer-max-recent";
 const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
+
+function getMaxRecentFiles(): number {
+  try {
+    const saved = localStorage.getItem(MAX_RECENT_FILES_KEY);
+    if (saved) {
+      const num = Number(saved);
+      if (Number.isFinite(num) && num >= 1) return Math.floor(num);
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_MAX_RECENT_FILES;
+}
 
 function isTauriRuntime(): boolean {
   const tauriWindow = window as Window & {
@@ -64,6 +80,7 @@ function getFileLabel(fileId: string): string {
 function buildRecentFiles(
   fileId: string,
   recentFiles: RecentFileEntry[],
+  maxFiles: number = DEFAULT_MAX_RECENT_FILES,
 ): RecentFileEntry[] {
   const now = Date.now();
   const source: RecentFileEntry["source"] = canReopenRecentFile(fileId)
@@ -74,7 +91,7 @@ function buildRecentFiles(
   return [
     { id: fileId, label, source, lastOpenedAt: now },
     ...recentFiles.filter((entry) => entry.id !== fileId),
-  ].slice(0, MAX_RECENT_FILES);
+  ].slice(0, maxFiles);
 }
 
 function getInitialTheme(): "light" | "dark" {
@@ -188,6 +205,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   theme: getInitialTheme(),
   loading: false,
   error: null,
+  maxRecentFiles: getMaxRecentFiles(),
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
@@ -211,7 +229,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
 
       const doc = parseXml(content);
-      const recent = buildRecentFiles(fileId, get().recentFiles);
+      const recent = buildRecentFiles(fileId, get().recentFiles, get().maxRecentFiles);
       const xmlCache = {
         ...getRecentFileCache(),
         [fileId]: content,
@@ -236,7 +254,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   setDocument: (doc, xml, filePath) => {
-    const recent = buildRecentFiles(filePath, get().recentFiles);
+    const recent = buildRecentFiles(filePath, get().recentFiles, get().maxRecentFiles);
     const xmlCache = {
       ...getRecentFileCache(),
       [filePath]: xml,
@@ -271,6 +289,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+
+  setMaxRecentFiles: (max: number) => {
+    const clamped = Math.max(1, Math.floor(max));
+    localStorage.setItem(MAX_RECENT_FILES_KEY, String(clamped));
+    const current = get().recentFiles;
+    const trimmed = current.slice(0, clamped);
+    const xmlCache = getRecentFileCache();
+    persistRecentFiles(trimmed, xmlCache);
+    set({ maxRecentFiles: clamped, recentFiles: trimmed });
+  },
 }));
 
 export { createMemoryFileId };

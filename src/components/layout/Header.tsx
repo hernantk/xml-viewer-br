@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   FolderOpen,
   FileDown,
@@ -6,10 +7,12 @@ import {
   PanelLeft,
   Sun,
   Moon,
+  Settings,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useFileOpen } from "@/hooks/useFileOpen";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { SettingsModal } from "@/components/common/SettingsModal";
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -17,6 +20,7 @@ interface HeaderProps {
 }
 
 export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
@@ -86,12 +90,22 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
       <div className="flex-1" />
 
       <button
+        onClick={() => setSettingsOpen(true)}
+        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        title="Configurações"
+      >
+        <Settings size={18} />
+      </button>
+
+      <button
         onClick={toggleTheme}
         className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Alternar tema"
       >
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
       </button>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
   );
 }
