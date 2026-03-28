@@ -32,7 +32,7 @@
       "endpoints": [
         "https://github.com/hernantk/xml-viewer-br/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZBQzFDMkMwNzcyNTFFMTAKUldRUUhpVjN3TUxCYXBGdE1tVG5CaGFBdUVBTXhXNmdQR3dnbmFDK1VSa0JaSVVSUjhsWVBLUlcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyNEQ2NjBDREFCNDIyQgpSV1FyUXF2TllOWWtEamhZU1p4aVQ5b29yaUgzZWFxcGJPNjlOWFlrWkJZTWV6Mm1vSDRSMmdFMwo=",
       "windows": {
         "installerArgs": ["/SILENT"]
       }
