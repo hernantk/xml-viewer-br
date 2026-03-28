@@ -388,11 +388,22 @@ export function NFSeViewer({ nfse }: Props) {
 
         <div className="pdf-only">
           {pageChunks.map((chunk, index) => (
-            <section key={`page-${index + 1}`} className="danfe-page p-4">
-              {chunk.map((key) => (
-                <div key={key}>{findBlock(key)?.node ?? null}</div>
-              ))}
-            </section>
+            <div key={`page-${index + 1}`}>
+              {index > 0 && (
+                <div className="pdf-hidden flex items-center py-5">
+                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+                  <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 whitespace-nowrap">
+                    Página {index + 1}
+                  </span>
+                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+                </div>
+              )}
+              <section className="danfe-page p-4">
+                {chunk.map((key) => (
+                  <div key={key}>{findBlock(key)?.node ?? null}</div>
+                ))}
+              </section>
+            </div>
           ))}
         </div>
       </div>

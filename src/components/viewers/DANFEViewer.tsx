@@ -556,11 +556,20 @@ export function DANFEViewer({ nfe }: Props) {
           </section>
 
           {continuationProductPages.map((items, index) => (
-            <section key={`page-${index + 2}`} className="danfe-page p-4">
-              {headerBlock}
-              {recipientSection}
-              <ProductsTable items={items} />
-            </section>
+            <div key={`page-${index + 2}`}>
+              <div className="pdf-hidden flex items-center py-5">
+                <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+                <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 whitespace-nowrap">
+                  Página {index + 2}
+                </span>
+                <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+              </div>
+              <section className="danfe-page p-4">
+                {headerBlock}
+                {recipientSection}
+                <ProductsTable items={items} />
+              </section>
+            </div>
           ))}
         </div>
       </div>
