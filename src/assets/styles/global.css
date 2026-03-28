@@ -64,16 +64,12 @@
   margin: 0;
 }
 
-* {
-  overflow-y: hidden;
-}
-
 .danfe-page {
   break-after: page;
   page-break-after: always;
   break-inside: avoid-page;
   page-break-inside: avoid;
-  overflow: hidden;
+  overflow: visible;
   min-height: 297mm;
 }
 
@@ -83,6 +79,21 @@
 }
 
 @media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .flex.h-screen,
+  .flex-1,
+  main {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   body {
     background: white !important;
     color: black !important;
@@ -95,11 +106,6 @@
     display: none !important;
   }
 
-  main {
-    overflow: visible !important;
-    height: auto !important;
-  }
-
   #document-viewer-content {
     break-inside: avoid;
   }
@@ -109,7 +115,7 @@
     page-break-after: always;
     break-inside: avoid-page;
     page-break-inside: avoid;
-    overflow: hidden;
+    overflow: visible;
     min-height: 297mm;
   }
 
