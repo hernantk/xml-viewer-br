@@ -4,7 +4,9 @@ import { Header } from "./Header";
 import { DocumentViewer } from "../viewers/DocumentViewer";
 import { EmptyState } from "../common/EmptyState";
 import { FileDropZone } from "../common/FileDropZone";
+import { UpdaterModal } from "../common/UpdaterModal";
 import { useAssociatedFileOpen } from "@/hooks/useAssociatedFileOpen";
+import { useUpdater } from "@/hooks/useUpdater";
 import { useDocumentStore } from "@/store/documentStore";
 
 export function AppShell() {
@@ -14,6 +16,7 @@ export function AppShell() {
   const error = useDocumentStore((s) => s.error);
 
   useAssociatedFileOpen();
+  const updater = useUpdater();
 
   return (
     <FileDropZone>
@@ -33,6 +36,15 @@ export function AppShell() {
           </main>
         </div>
       </div>
+      <UpdaterModal
+        status={updater.status}
+        updateInfo={updater.updateInfo}
+        downloadProgress={updater.downloadProgress}
+        errorMessage={updater.errorMessage}
+        onDownload={updater.downloadAndInstall}
+        onRelaunch={updater.relaunch}
+        onDismiss={updater.dismiss}
+      />
     </FileDropZone>
   );
 }
