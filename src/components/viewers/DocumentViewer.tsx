@@ -111,15 +111,16 @@ export function DocumentViewer() {
   };
 
   let viewer = null;
+  const viewerKey = `${doc.documentType}-${chave || "sem-chave"}`;
   switch (doc.documentType) {
     case "nfe":
-      viewer = doc.nfe ? <DANFEViewer nfe={doc.nfe} /> : null;
+      viewer = doc.nfe ? <DANFEViewer key={viewerKey} nfe={doc.nfe} /> : null;
       break;
     case "cte":
-      viewer = doc.cte ? <DACTeViewer cte={doc.cte} /> : null;
+      viewer = doc.cte ? <DACTeViewer key={viewerKey} cte={doc.cte} /> : null;
       break;
     case "nfse":
-      viewer = doc.nfse ? <NFSeViewer nfse={doc.nfse} /> : null;
+      viewer = doc.nfse ? <NFSeViewer key={viewerKey} nfse={doc.nfse} /> : null;
       break;
   }
 

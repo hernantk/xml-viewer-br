@@ -373,7 +373,7 @@ export function NFSeViewer({ nfse }: Props) {
     );
     const nextChunks = chunkBlockKeys(blockKeys, heights, pageContentHeight);
     setPageChunks((prev) => (arePageChunksEqual(prev, nextChunks) ? prev : nextChunks));
-  }, [blockKeySignature, pageContentHeight]);
+  }, [blockKeySignature, pageContentHeight, nfse]);
 
   const findBlock = (key: string) => contentBlocks.find((block) => block.key === key);
 
