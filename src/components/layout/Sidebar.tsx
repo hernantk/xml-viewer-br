@@ -226,7 +226,11 @@ export function Sidebar() {
                   <button
                     onClick={() => loadFile(recentFile.id)}
                     onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
-                    className="w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className={`w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                      recentFile.id === currentFilePath
+                        ? "bg-gray-200 dark:bg-gray-700"
+                        : ""
+                    }`}
                     title={recentFile.label}
                   >
                     <span className="flex items-center justify-between gap-2">
