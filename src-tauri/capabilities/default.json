@@ -25,6 +25,6 @@
       "allow": [{ "path": "$TEMP/**" }]
     },
     "updater:default",
-    "process:allow-relaunch"
+    "process:allow-restart"
   ]
 }
