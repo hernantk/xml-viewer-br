@@ -64,6 +64,10 @@
   margin: 0;
 }
 
+* {
+  overflow-y: hidden;
+}
+
 .danfe-page {
   break-after: page;
   page-break-after: always;
