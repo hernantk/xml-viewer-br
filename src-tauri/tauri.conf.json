@@ -60,10 +60,14 @@
     "longDescription": "Visualizador de documentos fiscais eletrônicos brasileiros: NF-e, CT-e e NFS-e. Permite visualizar, imprimir e exportar DANFE, DACTE e NFS-e em PDF.",
     "copyright": "© 2026 XML Viewer BR",
     "category": "Utility",
+    "resources": {
+      "../target/release/xml_preview_handler.dll": "."
+    },
     "windows": {
       "nsis": {
         "languages": ["PortugueseBR"],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerHooks": "nsis/installer-hooks.nsh"
       }
     }
   }
