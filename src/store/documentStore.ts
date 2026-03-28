@@ -258,12 +258,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
 
       const doc = parseXml(content);
-      const recent = buildRecentFiles(
-        fileId,
-        get().recentFiles,
-        doc.documentType,
-        get().maxRecentFiles,
-      );
+      const now = Date.now();
+      const existingEntry = get().recentFiles.find((f) => f.id === fileId);
+      const isRecentlyOpened =
+        existingEntry != null && now - existingEntry.lastOpenedAt < 60_000;
+      const recent = isRecentlyOpened
+        ? get().recentFiles
+        : buildRecentFiles(
+            fileId,
+            get().recentFiles,
+            doc.documentType,
+            get().maxRecentFiles,
+          );
       const xmlCache = {
         ...getRecentFileCache(),
         [fileId]: content,
