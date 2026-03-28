@@ -63,14 +63,6 @@ export async function generatePdfFromElement(
   clone.style.top = "0";
   clone.style.padding = "0";
   clone.style.margin = "0";
-  clone.style.lineHeight = "1.8";
-
-  const allElements = clone.querySelectorAll("tr, td, th, div, span, p, li, section");
-  allElements.forEach((el) => {
-    if (el instanceof HTMLElement) {
-      el.style.lineHeight = "1.8em";
-    }
-  });
 
   removeDarkClasses(clone);
   prepareCloneForPdf(clone);

@@ -445,10 +445,6 @@ export function DACTeViewer({ cte }: Props) {
   );
   const [pageChunks, setPageChunks] = useState<string[][]>([blockKeys]);
 
-  useEffect(() => {
-    setPageChunks([blockKeys]);
-  }, [blockKeySignature]);
-
   useLayoutEffect(() => {
     const heights = blockKeys.map(
       (key) => measureRefs.current[key]?.getBoundingClientRect().height ?? 0,

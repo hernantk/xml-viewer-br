@@ -22,8 +22,8 @@ interface Props {
 const A4_PAGE_HEIGHT_PX = 1122;
 const PAGE_PADDING_PX = 16;
 const PAGE_SAFETY_PX = 12;
-const FIRST_PAGE_COMPENSATION_PX = 120;
-const NEXT_PAGE_COMPENSATION_PX = 120;
+const FIRST_PAGE_COMPENSATION_PX = 180;
+const NEXT_PAGE_COMPENSATION_PX = 180;
 
 function Field({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
@@ -296,11 +296,6 @@ export function DANFEViewer({ nfe }: Props) {
   const measureRowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   const [pageChunks, setPageChunks] = useState<number[][]>([det.map((_, index) => index)]);
 
-  useEffect(() => {
-    measureRowRefs.current = [];
-    setPageChunks([det.map((_, index) => index)]);
-  }, [det]);
-
   const receiptBlock = (
     <>
       <div className="border border-black dark:border-gray-400">
@@ -339,8 +334,7 @@ export function DANFEViewer({ nfe }: Props) {
     </>
   );
 
-  const topSections = (
-    <>
+  const recipientSection = (
       <div className="border border-t-0 border-black dark:border-gray-400">
         <SectionTitle>Destinatário / Remetente</SectionTitle>
         <div className="grid grid-cols-[1fr_170px_120px]">
@@ -369,6 +363,11 @@ export function DANFEViewer({ nfe }: Props) {
           <Field label="Hora de Saída" value={ide.dhSaiEnt ? formatTime(ide.dhSaiEnt) : ""} />
         </div>
       </div>
+  );
+
+  const topSections = (
+    <>
+      {recipientSection}
 
       {cobr && (cobr.fat || (cobr.dup && cobr.dup.length > 0)) && (
         <div className="border border-t-0 border-black dark:border-gray-400">
@@ -559,6 +558,7 @@ export function DANFEViewer({ nfe }: Props) {
           {continuationProductPages.map((items, index) => (
             <section key={`page-${index + 2}`} className="danfe-page p-4">
               {headerBlock}
+              {recipientSection}
               <ProductsTable items={items} />
             </section>
           ))}
@@ -576,6 +576,7 @@ export function DANFEViewer({ nfe }: Props) {
         </div>
         <div ref={measureContinuationHeaderRef} className="p-4">
           {headerBlock}
+          {recipientSection}
         </div>
         <div className="p-4">
           <ProductsTable items={det} rowRefs={measureRowRefs} headRef={measureProductsHeadRef} />

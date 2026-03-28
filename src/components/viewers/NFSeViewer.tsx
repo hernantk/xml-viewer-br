@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { CompNfse } from "@/types/nfse";
 import { formatCNPJorCPF, formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -366,10 +366,6 @@ export function NFSeViewer({ nfse }: Props) {
     120,
   );
   const [pageChunks, setPageChunks] = useState<string[][]>([blockKeys]);
-
-  useEffect(() => {
-    setPageChunks([blockKeys]);
-  }, [blockKeySignature]);
 
   useLayoutEffect(() => {
     const heights = blockKeys.map(
