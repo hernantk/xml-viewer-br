@@ -9,6 +9,7 @@ import {
 import type { UpdateInfo, UpdaterStatus } from "@/hooks/useUpdater";
 
 interface UpdaterModalProps {
+  visible: boolean;
   status: UpdaterStatus;
   updateInfo: UpdateInfo | null;
   downloadProgress: number;
@@ -26,6 +27,7 @@ const VISIBLE_STATUSES: UpdaterStatus[] = [
 ];
 
 export function UpdaterModal({
+  visible,
   status,
   updateInfo,
   downloadProgress,
@@ -34,7 +36,7 @@ export function UpdaterModal({
   onRelaunch,
   onDismiss,
 }: UpdaterModalProps) {
-  if (!VISIBLE_STATUSES.includes(status)) return null;
+  if (!visible || !VISIBLE_STATUSES.includes(status)) return null;
 
   const isDownloading = status === "downloading";
 

@@ -10,6 +10,8 @@ import {
   Sun,
   Moon,
   Settings,
+  ArrowUpCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useFileOpen } from "@/hooks/useFileOpen";
@@ -18,13 +20,25 @@ import { SettingsModal } from "@/components/common/SettingsModal";
 import { BatchPdfModal } from "@/components/common/BatchPdfModal";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
 import { isTauriRuntime } from "@/utils/runtime";
+import type { UpdaterStatus } from "@/hooks/useUpdater";
 
 interface HeaderProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  hasUpdate?: boolean;
+  updateStatus?: UpdaterStatus;
+  updateVersion?: string;
+  onShowUpdate?: () => void;
 }
 
-export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
+export function Header({
+  sidebarOpen,
+  onToggleSidebar,
+  hasUpdate,
+  updateStatus,
+  updateVersion,
+  onShowUpdate,
+}: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const validation = useDocumentStore((s) => s.validation);
@@ -118,6 +132,28 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
       )}
 
       <div className="flex-1" />
+
+      {hasUpdate && onShowUpdate && (
+        updateStatus === "ready" ? (
+          <button
+            onClick={onShowUpdate}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-400 font-medium transition-colors"
+            title="Atualização baixada — clique para reiniciar"
+          >
+            <RefreshCw size={13} />
+            Reiniciar para atualizar
+          </button>
+        ) : (
+          <button
+            onClick={onShowUpdate}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 dark:text-amber-400 font-medium transition-colors"
+            title={updateVersion ? `Nova versão disponível: v${updateVersion}` : "Nova versão disponível"}
+          >
+            <ArrowUpCircle size={13} />
+            {updateVersion ? `v${updateVersion} disponível` : "Atualização disponível"}
+          </button>
+        )
+      )}
 
       <button
         onClick={() => setSettingsOpen(true)}

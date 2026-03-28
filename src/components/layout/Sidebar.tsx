@@ -6,6 +6,7 @@ import appLogo from "@/assets/branding/app-logo.svg";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import type { DocumentType } from "@/types/common";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { isTauriRuntime } from "@/utils/runtime";
 
 function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): string {
   if (!lastOpenedAt) return "agora";
@@ -27,6 +28,7 @@ export function Sidebar() {
   const [now, setNow] = useState(() => Date.now());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
+  const [appVersion, setAppVersion] = useState<string | null>(null);
   const recentFiles = useDocumentStore((s) => s.recentFiles);
   const loadFile = useDocumentStore((s) => s.loadFile);
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
@@ -109,6 +111,17 @@ export function Sidebar() {
     return () => {
       window.clearInterval(intervalId);
     };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      setAppVersion("1.0.0");
+      return;
+    }
+    import("@tauri-apps/api/app")
+      .then(({ getVersion }) => getVersion())
+      .then(setAppVersion)
+      .catch(() => setAppVersion("1.0.0"));
   }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
@@ -261,6 +274,12 @@ export function Sidebar() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-2 shrink-0">
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center select-none">
+          {appVersion ? `v${appVersion}` : ""}
+        </p>
       </div>
 
       {contextMenu && (

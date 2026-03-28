@@ -26,6 +26,10 @@ export function AppShell() {
           <Header
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            hasUpdate={updater.status === "available" || updater.status === "ready"}
+            updateStatus={updater.status}
+            updateVersion={updater.updateInfo?.version}
+            onShowUpdate={updater.openModal}
           />
           <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-800">
             {currentDocument || loading || error ? (
@@ -37,6 +41,7 @@ export function AppShell() {
         </div>
       </div>
       <UpdaterModal
+        visible={updater.modalVisible}
         status={updater.status}
         updateInfo={updater.updateInfo}
         downloadProgress={updater.downloadProgress}

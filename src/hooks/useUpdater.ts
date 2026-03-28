@@ -21,6 +21,7 @@ interface UpdaterState {
   updateInfo: UpdateInfo | null;
   downloadProgress: number;
   errorMessage: string | null;
+  modalVisible: boolean;
 }
 
 type DownloadEvent = {
@@ -41,6 +42,7 @@ export function useUpdater() {
     updateInfo: null,
     downloadProgress: 0,
     errorMessage: null,
+    modalVisible: false,
   });
 
   const pendingUpdate = useRef<PendingUpdate | null>(null);
@@ -64,6 +66,7 @@ export function useUpdater() {
         status: "available",
         downloadProgress: 0,
         errorMessage: null,
+        modalVisible: false,
         updateInfo: {
           version: update.version,
           date: update.date ?? null,
@@ -77,6 +80,7 @@ export function useUpdater() {
         downloadProgress: 0,
         errorMessage:
           err instanceof Error ? err.message : "Erro ao verificar atualização",
+        modalVisible: false,
       });
     }
   }, []);
@@ -125,8 +129,25 @@ export function useUpdater() {
   }, []);
 
   const dismiss = useCallback(() => {
-    setState((s) => ({ ...s, status: "idle" }));
-    pendingUpdate.current = null;
+    setState((prev) => {
+      // Se update disponível ou pronto para instalar: só fecha o modal, mantém o botão no header
+      if (prev.status === "available" || prev.status === "ready") {
+        return { ...prev, modalVisible: false };
+      }
+      // Para erro ou outros estados: reseta tudo
+      pendingUpdate.current = null;
+      return {
+        status: "idle",
+        updateInfo: null,
+        downloadProgress: 0,
+        errorMessage: null,
+        modalVisible: false,
+      };
+    });
+  }, []);
+
+  const openModal = useCallback(() => {
+    setState((s) => ({ ...s, modalVisible: true }));
   }, []);
 
   // Verifica update 3s após mount — não bloqueia o render inicial
@@ -135,5 +156,5 @@ export function useUpdater() {
     return () => clearTimeout(timer);
   }, [checkForUpdates]);
 
-  return { ...state, checkForUpdates, downloadAndInstall, relaunch, dismiss };
+  return { ...state, checkForUpdates, downloadAndInstall, relaunch, dismiss, openModal };
 }
