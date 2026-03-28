@@ -22,8 +22,8 @@ interface Props {
 const A4_PAGE_HEIGHT_PX = 1122;
 const PAGE_PADDING_PX = 16;
 const PAGE_SAFETY_PX = 12;
-const FIRST_PAGE_COMPENSATION_PX = -60;
-const NEXT_PAGE_COMPENSATION_PX = -140;
+const FIRST_PAGE_COMPENSATION_PX = -20;
+const NEXT_PAGE_COMPENSATION_PX = -80;
 
 function Field({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
