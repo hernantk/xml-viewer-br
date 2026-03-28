@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDocumentStore } from "@/store/documentStore";
 import { getPdfBaseName } from "@/utils/documentFileNames";
+import { isTauriRuntime } from "@/utils/runtime";
 
 /**
  * Try to export the PDF using the native WebView2 `PrintToPdf` Tauri command.
@@ -19,14 +20,15 @@ async function tryNativePrintToPdf(outputPath: string): Promise<boolean> {
 
 /**
  * Fallback: generate the PDF using html2canvas + jsPDF and save/download it.
+ * Returns the saved file path when available.
  */
 async function fallbackHtml2CanvasPdf(
   defaultName: string,
   downloadDir: string,
-): Promise<void> {
+): Promise<string | null> {
   const viewerEl = document.getElementById("document-viewer-content");
   if (!viewerEl) {
-    throw new Error("Elemento do viewer não encontrado");
+    throw new Error("Elemento do viewer nao encontrado");
   }
 
   const { generatePdfFromElement } = await import("@/services/pdfGenerator");
@@ -39,15 +41,18 @@ async function fallbackHtml2CanvasPdf(
       const sep = downloadDir.includes("\\") ? "\\" : "/";
       const filePath = `${downloadDir}${sep}${defaultName}.pdf`;
       await writeFile(filePath, pdfBytes);
-    } else {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const outputPath = await save({
-        defaultPath: `${defaultName}.pdf`,
-        filters: [{ name: "PDF", extensions: ["pdf"] }],
-      });
-      if (outputPath) {
-        await writeFile(outputPath, pdfBytes);
-      }
+      return filePath;
+    }
+
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const outputPath = await save({
+      defaultPath: `${defaultName}.pdf`,
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+    });
+
+    if (outputPath) {
+      await writeFile(outputPath, pdfBytes);
+      return outputPath;
     }
   } catch {
     // Fallback: browser download
@@ -63,11 +68,14 @@ async function fallbackHtml2CanvasPdf(
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  return null;
 }
 
 export function usePdfExport() {
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [exportNotice, setExportNotice] = useState("");
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const downloadDir = useDocumentStore((s) => s.downloadDir);
 
@@ -75,18 +83,19 @@ export function usePdfExport() {
     if (!currentDocument) return;
 
     setExporting(true);
+    setExportNotice("");
+
     try {
       const defaultName = getPdfBaseName(currentDocument);
+      const tauriRuntime = isTauriRuntime();
 
       // ------------------------------------------------------------------
       // Strategy: try the native WebView2 PrintToPdf first (vector PDF,
-      // selectable text, honours @media print CSS).  Fall back to the
+      // selectable text, honours @media print CSS). Fall back to the
       // html2canvas raster approach for non-Windows / browser dev mode.
       // ------------------------------------------------------------------
-
       let outputPath: string | null = null;
 
-      // Resolve the destination path *before* calling the native command.
       try {
         if (downloadDir) {
           const sep = downloadDir.includes("\\") ? "\\" : "/";
@@ -99,17 +108,25 @@ export function usePdfExport() {
           });
         }
       } catch {
-        // Not in Tauri — will use fallback below.
         outputPath = null;
       }
 
       if (outputPath) {
         const nativeOk = await tryNativePrintToPdf(outputPath);
-        if (nativeOk) return; // Done — native PDF saved.
+        if (nativeOk) {
+          if (tauriRuntime) {
+            setExportNotice(`Exportação concluída com sucesso. Salvo em ${outputPath}`);
+            setTimeout(() => setExportNotice(""), 3500);
+          }
+          return;
+        }
       }
 
-      // Fallback to html2canvas + jsPDF
-      await fallbackHtml2CanvasPdf(defaultName, downloadDir);
+      const savedPath = await fallbackHtml2CanvasPdf(defaultName, downloadDir);
+      if (tauriRuntime && savedPath) {
+        setExportNotice(`Exportação concluída com sucesso. Salvo em ${savedPath}`);
+        setTimeout(() => setExportNotice(""), 3500);
+      }
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
       alert(
@@ -126,7 +143,6 @@ export function usePdfExport() {
 
     setPrinting(true);
     try {
-      // Use native print dialog (works in both browser and Tauri WebView2)
       window.print();
     } catch (err) {
       console.error("Erro ao imprimir:", err);
@@ -139,5 +155,5 @@ export function usePdfExport() {
     }
   }, [currentDocument]);
 
-  return { exportPdf, exporting, printPdf, printing };
+  return { exportPdf, exporting, printPdf, printing, exportNotice };
 }

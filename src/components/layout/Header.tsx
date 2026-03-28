@@ -46,7 +46,7 @@ export function Header({
   const toggleTheme = useDocumentStore((s) => s.toggleTheme);
   const downloadDir = useDocumentStore((s) => s.downloadDir);
   const { openFile, importNotice } = useFileOpen();
-  const { exportPdf, exporting, printPdf, printing } = usePdfExport();
+  const { exportPdf, exporting, printPdf, printing, exportNotice } = usePdfExport();
   const batchPdf = useBatchPdfExport({ initialOutputDir: downloadDir });
   const showBatchButton = isTauriRuntime();
 
@@ -197,6 +197,11 @@ export function Header({
     {importNotice && (
       <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
         {importNotice}
+      </div>
+    )}
+    {exportNotice && (
+      <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
+        {exportNotice}
       </div>
     )}
     </>

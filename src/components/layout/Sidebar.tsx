@@ -33,7 +33,7 @@ export function Sidebar() {
   const loadFile = useDocumentStore((s) => s.loadFile);
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
   const currentFilePath = useDocumentStore((s) => s.currentFilePath);
-  const { exportPdf, exporting, printPdf, printing } = usePdfExport();
+  const { exportPdf, exporting, printPdf, printing, exportNotice } = usePdfExport();
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -312,6 +312,12 @@ export function Sidebar() {
             <Trash2 size={14} />
             Remover do histórico
           </button>
+        </div>
+      )}
+
+      {exportNotice && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
+          {exportNotice}
         </div>
       )}
     </aside>
