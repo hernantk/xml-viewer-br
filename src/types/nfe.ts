@@ -15,7 +15,7 @@ export interface InfNFe {
   total: Total;
   transp: Transp;
   cobr?: Cobr;
-  pag: Pag;
+  pag?: Pag;
   infAdic?: InfAdic;
 }
 

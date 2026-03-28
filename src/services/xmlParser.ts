@@ -79,7 +79,7 @@ function parseInfNFe(el: Element): InfNFe {
   const totalEl = getEl(el, "total")!;
   const transpEl = getEl(el, "transp")!;
   const cobrEl = getEl(el, "cobr");
-  const pagEl = getEl(el, "pag")!;
+  const pagEl = getEl(el, "pag");
   const infAdicEl = getEl(el, "infAdic");
 
   const detEls = getElAll(el, "det").filter(
@@ -96,7 +96,7 @@ function parseInfNFe(el: Element): InfNFe {
     total: parseTotal(totalEl),
     transp: parseTransp(transpEl),
     cobr: cobrEl ? parseCobr(cobrEl) : undefined,
-    pag: parsePag(pagEl),
+    pag: pagEl ? parsePag(pagEl) : undefined,
     infAdic: infAdicEl ? parseInfAdic(infAdicEl) : undefined,
   };
 }
