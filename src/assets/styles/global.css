@@ -65,17 +65,22 @@
 }
 
 .danfe-page {
-  break-after: page;
-  page-break-after: always;
+  break-after: auto;
+  page-break-after: auto;
   break-inside: avoid-page;
   page-break-inside: avoid;
   overflow: visible;
-  min-height: 297mm;
+  min-height: auto;
 }
 
 .danfe-page:last-child {
   break-after: auto;
   page-break-after: auto;
+}
+
+.danfe-page + .danfe-page {
+  break-before: page;
+  page-break-before: always;
 }
 
 @media print {
@@ -111,16 +116,21 @@
   }
 
   .danfe-page {
-    break-after: page;
-    page-break-after: always;
+    break-after: auto;
+    page-break-after: auto;
     break-inside: avoid-page;
     page-break-inside: avoid;
     overflow: visible;
-    min-height: 297mm;
+    min-height: auto;
   }
 
   .danfe-page:last-child {
     break-after: auto;
     page-break-after: auto;
+  }
+
+  .danfe-page + .danfe-page {
+    break-before: page;
+    page-break-before: always;
   }
 }
