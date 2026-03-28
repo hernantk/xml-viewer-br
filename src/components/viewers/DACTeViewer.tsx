@@ -486,7 +486,7 @@ export function DACTeViewer({ cte }: Props) {
         </div>
       </div>
 
-      <div className="absolute left-[-9999px] top-0 w-[794px] opacity-0 pointer-events-none">
+      <div className="fixed -left-[200vw] top-0 w-[794px] opacity-0 pointer-events-none">
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

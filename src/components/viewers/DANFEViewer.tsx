@@ -573,7 +573,7 @@ export function DANFEViewer({ nfe }: Props) {
         </div>
       </div>
 
-      <div className="absolute left-[-9999px] top-0 w-[794px] opacity-0 pointer-events-none">
+      <div className="fixed -left-[200vw] top-0 w-[794px] opacity-0 pointer-events-none">
         <div ref={measureFirstPageRef} className="p-4">
           {receiptBlock}
           {headerBlock}
