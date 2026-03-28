@@ -566,7 +566,6 @@ export function DANFEViewer({ nfe }: Props) {
               </div>
               <section className="danfe-page p-4">
                 {headerBlock}
-                {recipientSection}
                 <ProductsTable items={items} />
               </section>
             </div>
