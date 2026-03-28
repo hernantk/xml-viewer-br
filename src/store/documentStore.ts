@@ -28,6 +28,7 @@ interface DocumentState {
   setError: (error: string | null) => void;
   setMaxRecentFiles: (max: number) => void;
   setDownloadDir: (dir: string) => void;
+  initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
@@ -348,6 +349,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setDownloadDir: (dir: string) => {
     localStorage.setItem(DOWNLOAD_DIR_KEY, dir);
     set({ downloadDir: dir });
+  },
+
+  initializeDownloadDir: async () => {
+    const currentDownloadDir = get().downloadDir.trim();
+    if (currentDownloadDir) {
+      return;
+    }
+
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    try {
+      const { downloadDir } = await import("@tauri-apps/api/path");
+      const resolvedDownloadDir = await downloadDir();
+      if (resolvedDownloadDir && !get().downloadDir.trim()) {
+        get().setDownloadDir(resolvedDownloadDir);
+      }
+    } catch {
+      // Ignore failures: user can still configure it manually in Settings.
+    }
   },
 
   removeRecentFile: (fileId: string) => {

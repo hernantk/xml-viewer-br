@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DocumentViewer } from "../viewers/DocumentViewer";
@@ -14,9 +14,14 @@ export function AppShell() {
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const loading = useDocumentStore((s) => s.loading);
   const error = useDocumentStore((s) => s.error);
+  const initializeDownloadDir = useDocumentStore((s) => s.initializeDownloadDir);
 
   useAssociatedFileOpen();
   const updater = useUpdater();
+
+  useEffect(() => {
+    void initializeDownloadDir();
+  }, [initializeDownloadDir]);
 
   return (
     <FileDropZone>
