@@ -6,6 +6,7 @@
 #[cfg(target_os = "windows")]
 mod inner {
     use std::cell::UnsafeCell;
+    use std::sync::atomic::Ordering;
     use std::sync::Once;
 
     use windows::Win32::Foundation::{HWND, LRESULT, LPARAM, RECT, WPARAM};
@@ -34,6 +35,8 @@ mod inner {
 
     const WND_CLASS: PCWSTR = w!("XmlPreviewHandlerBrWnd");
     const NULL_HWND: HWND   = HWND(std::ptr::null_mut());
+    const E_FAIL: HRESULT = HRESULT(-2147467259i32);
+    const MAX_PREVIEW_XML_BYTES: u64 = 4 * 1024 * 1024;
 
     // -----------------------------------------------------------------------
     // State
@@ -43,7 +46,7 @@ mod inner {
         hwnd_parent:  HWND,
         hwnd_preview: HWND,
         rect:         RECT,
-        info:         Option<XmlPreviewInfo>,
+        info:         Option<Box<XmlPreviewInfo>>,
     }
 
     // -----------------------------------------------------------------------
@@ -61,6 +64,7 @@ mod inner {
 
     impl XmlPreviewHandler {
         pub fn new() -> Self {
+            crate::dll::OBJECT_COUNT.fetch_add(1, Ordering::Relaxed);
             XmlPreviewHandler {
                 state: UnsafeCell::new(State {
                     hwnd_parent:  NULL_HWND,
@@ -77,6 +81,41 @@ mod inner {
         }
     }
 
+    impl Drop for XmlPreviewHandler {
+        fn drop(&mut self) {
+            unsafe {
+                let s = &mut *self.state.get();
+                if !s.hwnd_preview.0.is_null() {
+                    SetWindowLongPtrW(s.hwnd_preview, GWLP_USERDATA, 0);
+                    let _ = DestroyWindow(s.hwnd_preview);
+                    s.hwnd_preview = NULL_HWND;
+                }
+                s.info = None;
+            }
+
+            crate::dll::OBJECT_COUNT.fetch_sub(1, Ordering::Relaxed);
+        }
+    }
+
+    fn load_preview_info(path: &str) -> Box<XmlPreviewInfo> {
+        let bytes = match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(_) => return Box::new(XmlPreviewInfo::default()),
+        };
+
+        // Keep preview fast and avoid blocking Explorer on very large XML files.
+        if bytes.len() as u64 > MAX_PREVIEW_XML_BYTES {
+            return Box::new(XmlPreviewInfo::default());
+        }
+
+        let xml = match String::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(e) => String::from_utf8_lossy(e.as_bytes()).into_owned(),
+        };
+
+        Box::new(crate::xml_info::parse(&xml))
+    }
+
     // -----------------------------------------------------------------------
     // IInitializeWithFile
     // -----------------------------------------------------------------------
@@ -84,14 +123,21 @@ mod inner {
     impl IInitializeWithFile_Impl for XmlPreviewHandler_Impl {
         fn Initialize(&self, pszfilepath: &PCWSTR, _grfmode: u32) -> windows_core::Result<()> {
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let path = unsafe { pszfilepath.to_string() }
-                    .map_err(|_| windows_core::Error::from(HRESULT(-2147467259i32)))?;
-                let xml = std::fs::read_to_string(&path)
-                    .map_err(|_| windows_core::Error::from(HRESULT(-2147467259i32)))?;
-                unsafe { self.state().info = Some(crate::xml_info::parse(&xml)) };
+                let info = unsafe { pszfilepath.to_string() }
+                    .ok()
+                    .map(|path| load_preview_info(&path))
+                    .unwrap_or_else(|| Box::new(XmlPreviewInfo::default()));
+                unsafe {
+                    let s = self.state();
+                    // Prevent stale pointer use while replacing preview data.
+                    if !s.hwnd_preview.0.is_null() {
+                        SetWindowLongPtrW(s.hwnd_preview, GWLP_USERDATA, 0);
+                    }
+                    s.info = Some(info);
+                }
                 Ok(())
             }))
-            .unwrap_or_else(|_| Err(windows_core::Error::from(HRESULT(-2147467259i32))))
+            .unwrap_or_else(|_| Err(windows_core::Error::from(E_FAIL)))
         }
     }
 
@@ -129,7 +175,7 @@ mod inner {
                 }
                 Ok(())
             }))
-            .unwrap_or_else(|_| Err(windows_core::Error::from(HRESULT(-2147467259i32))))
+            .unwrap_or_else(|_| Err(windows_core::Error::from(E_FAIL)))
         }
 
         fn SetRect(&self, prc: *const RECT) -> windows_core::Result<()> {
@@ -149,7 +195,7 @@ mod inner {
                 }
                 Ok(())
             }))
-            .unwrap_or_else(|_| Err(windows_core::Error::from(HRESULT(-2147467259i32))))
+            .unwrap_or_else(|_| Err(windows_core::Error::from(E_FAIL)))
         }
 
         fn DoPreview(&self) -> windows_core::Result<()> {
@@ -160,7 +206,7 @@ mod inner {
                     if hwnd.0.is_null() { return Ok(()); }
 
                     if let Some(ref info) = s.info {
-                        let ptr = info as *const XmlPreviewInfo as isize;
+                        let ptr = (&**info) as *const XmlPreviewInfo as isize;
                         SetWindowLongPtrW(hwnd, GWLP_USERDATA, ptr);
                     }
 
@@ -169,7 +215,7 @@ mod inner {
                 }
                 Ok(())
             }))
-            .unwrap_or_else(|_| Err(windows_core::Error::from(HRESULT(-2147467259i32))))
+            .unwrap_or_else(|_| Err(windows_core::Error::from(E_FAIL)))
         }
 
         fn Unload(&self) -> windows_core::Result<()> {
@@ -185,7 +231,7 @@ mod inner {
                 }
                 Ok(())
             }))
-            .unwrap_or_else(|_| Err(windows_core::Error::from(HRESULT(-2147467259i32))))
+            .unwrap_or_else(|_| Err(windows_core::Error::from(E_FAIL)))
         }
 
         fn SetFocus(&self) -> windows_core::Result<()> {

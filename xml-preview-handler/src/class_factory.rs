@@ -2,6 +2,8 @@
 
 #[cfg(target_os = "windows")]
 mod inner {
+    use std::sync::atomic::Ordering;
+
     use windows::Win32::System::Com::{IClassFactory, IClassFactory_Impl};
     use windows_core::{implement, IUnknown, Interface, GUID, HRESULT, BOOL};
 
@@ -31,6 +33,15 @@ mod inner {
         }
 
         fn LockServer(&self, _flock: BOOL) -> windows_core::Result<()> {
+            if _flock.as_bool() {
+                crate::dll::OBJECT_COUNT.fetch_add(1, Ordering::Relaxed);
+            } else {
+                crate::dll::OBJECT_COUNT.fetch_update(
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                    |v| v.checked_sub(1),
+                ).ok();
+            }
             Ok(())
         }
     }
