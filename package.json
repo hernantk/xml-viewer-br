@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:preview-handler": "cargo build --release -p xml-preview-handler",
+    "build:tauri-prebuild": "npm run build && npm run build:preview-handler",
     "preview": "vite preview",
     "tauri": "tauri"
   },
