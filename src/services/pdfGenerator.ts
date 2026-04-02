@@ -63,8 +63,10 @@ export async function generatePdfFromElement(
   clone.style.top = "0";
   clone.style.padding = "0";
   clone.style.margin = "0";
+  clone.style.boxShadow = "none";
 
   removeDarkClasses(clone);
+  forceWhiteBackgrounds(clone);
   prepareCloneForPdf(clone);
 
   document.body.appendChild(clone);
@@ -165,6 +167,29 @@ function prepareCloneForPdf(root: HTMLElement) {
   root.querySelectorAll<HTMLElement>(".pdf-only").forEach((el) => {
     el.style.display = "block";
   });
+}
+
+function forceWhiteBackgrounds(el: HTMLElement) {
+  if (el.classList) {
+    const bgClasses = Array.from(el.classList).filter((c) =>
+      c.startsWith("bg-"),
+    );
+    bgClasses.forEach((c) => {
+      if (c !== "bg-white" && c !== "bg-transparent") {
+        el.classList.remove(c);
+      }
+    });
+    if (!el.style.backgroundColor || el.style.backgroundColor === "") {
+      el.style.backgroundColor = "#ffffff";
+    }
+  }
+
+  for (let i = 0; i < el.children.length; i++) {
+    const child = el.children[i];
+    if (child instanceof HTMLElement) {
+      forceWhiteBackgrounds(child);
+    }
+  }
 }
 
 function removeDarkClasses(el: HTMLElement) {

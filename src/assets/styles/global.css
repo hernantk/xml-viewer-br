@@ -89,6 +89,7 @@
   #root {
     height: auto !important;
     overflow: visible !important;
+    background: white !important;
   }
 
   .flex.h-screen,
@@ -104,6 +105,20 @@
     color: black !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* Force white backgrounds on all dark-mode elements */
+  [class*="dark:"],
+  .dark,
+  .dark *,
+  [class*="bg-gray-900"],
+  [class*="bg-gray-800"],
+  [class*="bg-zinc-900"],
+  [class*="bg-zinc-800"],
+  [class*="bg-neutral-900"],
+  [class*="bg-neutral-800"] {
+    background-color: white !important;
+    color: black !important;
   }
 
   .no-print,
@@ -122,6 +137,7 @@
     page-break-inside: avoid;
     overflow: visible;
     min-height: auto;
+    background: white !important;
   }
 
   .danfe-page:last-child {
