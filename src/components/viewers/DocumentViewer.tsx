@@ -125,7 +125,7 @@ export function DocumentViewer() {
   }
 
   return (
-    <div className="p-3 md:p-4">
+    <div className="p-3 md:p-4 print:p-0">
       <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-700 no-print">
         <div className="flex min-w-0 items-center gap-2">
           <div className="text-gray-600 dark:text-gray-300">

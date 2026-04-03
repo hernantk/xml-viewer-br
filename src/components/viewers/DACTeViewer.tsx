@@ -450,7 +450,7 @@ export function DACTeViewer({ cte }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none">
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print">
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

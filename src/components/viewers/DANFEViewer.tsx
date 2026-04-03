@@ -595,7 +595,7 @@ export function DANFEViewer({ nfe }: Props) {
         in the same padding context as the actual rendered pages.
         Previously each group had its own p-4, double-counting 32 px per group.
       */}
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none">
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print">
         {/* First page: all static content shares one p-4, just like the real page */}
         <div className="p-4">
           <div ref={measureFirstPageRef}>
