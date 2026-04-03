@@ -125,12 +125,25 @@ export function Sidebar() {
   }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
+  const searchDigits = normalizedSearch.replace(/\D/g, "");
+
   const filteredRecentFiles = recentFiles.filter((recentFile) => {
-    const matchesSearch =
-      normalizedSearch.length === 0 ||
-      recentFile.label.toLowerCase().includes(normalizedSearch);
     const matchesType =
       typeFilter === "all" || recentFile.documentType === typeFilter;
+
+    if (normalizedSearch.length === 0) return matchesType;
+
+    const str = (s?: string) => (s ?? "").toLowerCase();
+    const digits = (s?: string) => (s ?? "").replace(/\D/g, "");
+
+    const matchesSearch =
+      str(recentFile.label).includes(normalizedSearch) ||
+      str(recentFile.chave).includes(normalizedSearch) ||
+      str(recentFile.numero).includes(normalizedSearch) ||
+      str(recentFile.nomeEmitente).includes(normalizedSearch) ||
+      str(recentFile.nomeDestinatario).includes(normalizedSearch) ||
+      (searchDigits.length >= 3 && digits(recentFile.cnpjEmitente).includes(searchDigits)) ||
+      (searchDigits.length >= 3 && digits(recentFile.cnpjDestinatario).includes(searchDigits));
 
     return matchesSearch && matchesType;
   });
@@ -178,7 +191,7 @@ export function Sidebar() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar"
+                  placeholder="Chave, nº, CNPJ, nome…"
                   className="h-7 w-full rounded-md bg-white/90 py-1 pl-7 pr-2 text-[11px] text-gray-700 outline-none ring-0 transition placeholder:text-gray-400 focus:bg-white dark:bg-gray-900/80 dark:text-gray-200 dark:focus:bg-gray-900"
                 />
               </label>

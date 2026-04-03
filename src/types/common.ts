@@ -6,6 +6,13 @@ export interface RecentFileEntry {
   source: "filesystem" | "memory";
   lastOpenedAt: number;
   documentType?: DocumentType;
+  // Metadados para busca
+  chave?: string;
+  numero?: string;
+  cnpjEmitente?: string;
+  nomeEmitente?: string;
+  cnpjDestinatario?: string;
+  nomeDestinatario?: string;
 }
 
 export interface Endereco {

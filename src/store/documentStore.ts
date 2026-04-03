@@ -92,20 +92,65 @@ function getFileLabel(fileId: string): string {
   return fileName || fileId;
 }
 
+function extractDocumentMeta(doc: ParsedDocument): Pick<
+  RecentFileEntry,
+  "chave" | "numero" | "cnpjEmitente" | "nomeEmitente" | "cnpjDestinatario" | "nomeDestinatario"
+> {
+  if (doc.documentType === "nfe" && doc.nfe) {
+    const { infNFe } = doc.nfe;
+    return {
+      chave: infNFe.id || undefined,
+      numero: infNFe.ide.nNF || undefined,
+      cnpjEmitente: infNFe.emit.CNPJ ?? infNFe.emit.CPF ?? undefined,
+      nomeEmitente: infNFe.emit.xNome || undefined,
+      cnpjDestinatario: infNFe.dest?.CNPJ ?? infNFe.dest?.CPF ?? undefined,
+      nomeDestinatario: infNFe.dest?.xNome ?? undefined,
+    };
+  }
+  if (doc.documentType === "cte" && doc.cte) {
+    const { infCte } = doc.cte;
+    return {
+      chave: infCte.id || undefined,
+      numero: infCte.ide.nCT || undefined,
+      cnpjEmitente: infCte.emit.CNPJ || undefined,
+      nomeEmitente: infCte.emit.xNome || undefined,
+      cnpjDestinatario: infCte.dest?.CNPJ ?? infCte.dest?.CPF ?? undefined,
+      nomeDestinatario: infCte.dest?.xNome ?? undefined,
+    };
+  }
+  if (doc.documentType === "nfse" && doc.nfse) {
+    const { infNfse } = doc.nfse.nfse;
+    return {
+      chave: infNfse.codigoVerificacao || undefined,
+      numero: infNfse.numero || undefined,
+      cnpjEmitente: infNfse.prestadorServico.identificacaoPrestador.cnpj || undefined,
+      nomeEmitente: infNfse.prestadorServico.razaoSocial || undefined,
+      cnpjDestinatario:
+        infNfse.tomadorServico?.identificacaoTomador?.cnpj ??
+        infNfse.tomadorServico?.identificacaoTomador?.cpf ??
+        undefined,
+      nomeDestinatario: infNfse.tomadorServico?.razaoSocial ?? undefined,
+    };
+  }
+  return {};
+}
+
 function buildRecentFiles(
   fileId: string,
   recentFiles: RecentFileEntry[],
   documentType?: DocumentType,
   maxFiles: number = DEFAULT_MAX_RECENT_FILES,
+  doc?: ParsedDocument,
 ): RecentFileEntry[] {
   const now = Date.now();
   const source: RecentFileEntry["source"] = canReopenRecentFile(fileId)
     ? "filesystem"
     : "memory";
   const label = getFileLabel(fileId);
+  const meta = doc ? extractDocumentMeta(doc) : {};
 
   return [
-    { id: fileId, label, source, lastOpenedAt: now, documentType },
+    { id: fileId, label, source, lastOpenedAt: now, documentType, ...meta },
     ...recentFiles.filter((entry) => entry.id !== fileId),
   ].slice(0, maxFiles);
 }
@@ -162,6 +207,12 @@ function getRecentFiles(): RecentFileEntry[] {
               entry.documentType === "nfse"
                 ? entry.documentType
                 : undefined,
+            chave: typeof entry.chave === "string" ? entry.chave : undefined,
+            numero: typeof entry.numero === "string" ? entry.numero : undefined,
+            cnpjEmitente: typeof entry.cnpjEmitente === "string" ? entry.cnpjEmitente : undefined,
+            nomeEmitente: typeof entry.nomeEmitente === "string" ? entry.nomeEmitente : undefined,
+            cnpjDestinatario: typeof entry.cnpjDestinatario === "string" ? entry.cnpjDestinatario : undefined,
+            nomeDestinatario: typeof entry.nomeDestinatario === "string" ? entry.nomeDestinatario : undefined,
           };
         }
 
@@ -270,6 +321,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             get().recentFiles,
             doc.documentType,
             get().maxRecentFiles,
+            doc,
           );
       const xmlCache = {
         ...getRecentFileCache(),
@@ -300,6 +352,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       get().recentFiles,
       doc.documentType,
       get().maxRecentFiles,
+      doc,
     );
     const xmlCache = {
       ...getRecentFileCache(),
@@ -428,6 +481,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           recentFiles,
           doc.documentType,
           currentMax,
+          doc,
         );
         xmlCache[file.id] = file.content;
         lastDoc = doc;
