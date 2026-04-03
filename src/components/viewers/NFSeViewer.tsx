@@ -1,6 +1,14 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { CompNfse } from "@/types/nfse";
 import { formatCNPJorCPF, formatCurrency, formatDate } from "@/utils/formatters";
+import {
+  measureA4HeightPx,
+  PAGE_PADDING_PX,
+  PAGE_SAFETY_PX,
+  chunkBlockKeys,
+  arePageChunksEqual,
+} from "@/utils/paginationUtils";
+import { usePaginationResize } from "@/hooks/usePaginationResize";
 
 interface Props {
   nfse: CompNfse;
@@ -9,57 +17,6 @@ interface Props {
 interface ContentBlock {
   key: string;
   node: React.ReactNode;
-}
-
-const A4_PAGE_HEIGHT_PX = 1122;
-const PAGE_PADDING_PX = 16;
-const PAGE_SAFETY_PX = 12;
-const PAGE_COMPENSATION_PX = 120;
-
-function chunkBlockKeys(
-  blockKeys: string[],
-  blockHeights: number[],
-  pageAvailable: number,
-) {
-  const chunks: string[][] = [];
-  let currentChunk: string[] = [];
-  let remaining = pageAvailable;
-
-  blockKeys.forEach((key, index) => {
-    const safeHeight = Math.max(blockHeights[index] ?? 0, 1);
-    if (currentChunk.length > 0 && safeHeight > remaining) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      remaining = pageAvailable;
-    }
-
-    currentChunk.push(key);
-    remaining -= safeHeight;
-
-    if (remaining <= 0) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      remaining = pageAvailable;
-    }
-  });
-
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks.length > 0 ? chunks : [blockKeys];
-}
-
-function arePageChunksEqual(a: string[][], b: string[][]) {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  return a.every(
-    (chunk, index) =>
-      chunk.length === b[index].length &&
-      chunk.every((value, chunkIndex) => value === b[index][chunkIndex]),
-  );
 }
 
 function Field({
@@ -361,19 +318,26 @@ export function NFSeViewer({ nfse }: Props) {
 
   const blockKeys = contentBlocks.map((block) => block.key);
   const blockKeySignature = blockKeys.join("|");
-  const pageContentHeight = Math.max(
-    A4_PAGE_HEIGHT_PX - PAGE_PADDING_PX * 2 - PAGE_SAFETY_PX - PAGE_COMPENSATION_PX,
-    120,
-  );
   const [pageChunks, setPageChunks] = useState<string[][]>([blockKeys]);
 
-  useLayoutEffect(() => {
+  const recalculate = useCallback(() => {
+    const pageContentHeight = Math.max(
+      measureA4HeightPx() - PAGE_PADDING_PX * 2 - PAGE_SAFETY_PX,
+      120,
+    );
     const heights = blockKeys.map(
       (key) => measureRefs.current[key]?.getBoundingClientRect().height ?? 0,
     );
     const nextChunks = chunkBlockKeys(blockKeys, heights, pageContentHeight);
     setPageChunks((prev) => (arePageChunksEqual(prev, nextChunks) ? prev : nextChunks));
-  }, [blockKeySignature, pageContentHeight, nfse]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockKeySignature, nfse]);
+
+  useLayoutEffect(() => {
+    recalculate();
+  }, [recalculate]);
+
+  usePaginationResize(recalculate);
 
   const findBlock = (key: string) => contentBlocks.find((block) => block.key === key);
 
@@ -408,7 +372,7 @@ export function NFSeViewer({ nfse }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[794px] opacity-0 pointer-events-none">
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none">
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import JsBarcode from "jsbarcode";
 import type { Nfe } from "@/types/nfe";
 import {
@@ -14,16 +14,16 @@ import {
   formatTime,
   MODAL_FRETE,
 } from "@/utils/formatters";
+import {
+  measureA4HeightPx,
+  PAGE_PADDING_PX,
+  PAGE_SAFETY_PX,
+} from "@/utils/paginationUtils";
+import { usePaginationResize } from "@/hooks/usePaginationResize";
 
 interface Props {
   nfe: Nfe;
 }
-
-const A4_PAGE_HEIGHT_PX = 1122;
-const PAGE_PADDING_PX = 16;
-const PAGE_SAFETY_PX = 12;
-const FIRST_PAGE_COMPENSATION_PX = -20;
-const NEXT_PAGE_COMPENSATION_PX = -80;
 
 function Field({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
@@ -71,7 +71,7 @@ function Barcode({ value }: { value: string }) {
     }
   }, [value]);
 
-  return <svg ref={svgRef} className="w-full" />;
+  return <svg ref={svgRef} className="w-full h-[40px]" />;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -213,14 +213,19 @@ function ProductsTable({
   items,
   rowRefs,
   headRef,
+  titleRef,
 }: {
   items: Nfe["infNFe"]["det"];
   rowRefs?: React.MutableRefObject<(HTMLTableRowElement | null)[]>;
   headRef?: React.Ref<HTMLTableSectionElement>;
+  /** Measures the SectionTitle bar so its height can be included in pagination calculations. */
+  titleRef?: React.Ref<HTMLDivElement>;
 }) {
   return (
     <div className="border border-t-0 border-black dark:border-gray-400">
-      <SectionTitle>Dados dos Produtos / Serviços</SectionTitle>
+      <div ref={titleRef}>
+        <SectionTitle>Dados dos Produtos / Serviços</SectionTitle>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-[8px] border-collapse">
           <thead ref={headRef}>
@@ -293,6 +298,7 @@ export function DANFEViewer({ nfe }: Props) {
   const measureContinuationHeaderRef = useRef<HTMLDivElement>(null);
   const measureAdditionalRef = useRef<HTMLDivElement>(null);
   const measureProductsHeadRef = useRef<HTMLTableSectionElement>(null);
+  const measureProductsTitleRef = useRef<HTMLDivElement>(null);
   const measureRowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   const [pageChunks, setPageChunks] = useState<number[][]>([det.map((_, index) => index)]);
 
@@ -488,37 +494,46 @@ export function DANFEViewer({ nfe }: Props) {
     />
   );
 
-  useLayoutEffect(() => {
-    if (!measureFirstPageRef.current || !measureContinuationHeaderRef.current || !measureAdditionalRef.current || !measureProductsHeadRef.current) {
+  const recalculate = useCallback(() => {
+    if (
+      !measureFirstPageRef.current ||
+      !measureContinuationHeaderRef.current ||
+      !measureAdditionalRef.current ||
+      !measureProductsHeadRef.current ||
+      !measureProductsTitleRef.current
+    ) {
       return;
     }
+
+    const pageContentHeight = measureA4HeightPx() - PAGE_PADDING_PX * 2 - PAGE_SAFETY_PX;
 
     const firstPageStaticHeight = measureFirstPageRef.current.getBoundingClientRect().height;
     const continuationHeaderHeight = measureContinuationHeaderRef.current.getBoundingClientRect().height;
     const additionalHeight = measureAdditionalRef.current.getBoundingClientRect().height;
-    const productsHeadHeight = measureProductsHeadRef.current.getBoundingClientRect().height;
+    // SectionTitle ("Dados dos Produtos…") + column-header row = full fixed overhead of the table.
+    const productsHeadHeight =
+      measureProductsTitleRef.current.getBoundingClientRect().height +
+      measureProductsHeadRef.current.getBoundingClientRect().height;
     const rowHeights = det.map((_, index) => measureRowRefs.current[index]?.getBoundingClientRect().height ?? 0);
 
-    const pageContentHeight = A4_PAGE_HEIGHT_PX - PAGE_PADDING_PX * 2 - PAGE_SAFETY_PX;
-
     const firstPageAvailable = Math.max(
-      pageContentHeight -
-        firstPageStaticHeight -
-        additionalHeight -
-        productsHeadHeight -
-        FIRST_PAGE_COMPENSATION_PX,
+      pageContentHeight - firstPageStaticHeight - additionalHeight - productsHeadHeight,
       40,
     );
     const continuationPageAvailable = Math.max(
-      pageContentHeight -
-        continuationHeaderHeight -
-        productsHeadHeight -
-        NEXT_PAGE_COMPENSATION_PX,
+      pageContentHeight - continuationHeaderHeight - productsHeadHeight,
       40,
     );
 
     setPageChunks(chunkProducts(rowHeights, firstPageAvailable, continuationPageAvailable));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [det, emit, ide, protNFe, accessKey, dest, total, transp, cobr, infAdic]);
+
+  useLayoutEffect(() => {
+    recalculate();
+  }, [recalculate]);
+
+  usePaginationResize(recalculate);
 
   const productPages = pageChunks
     .map((chunk) => chunk
@@ -573,21 +588,31 @@ export function DANFEViewer({ nfe }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[794px] opacity-0 pointer-events-none">
-        <div ref={measureFirstPageRef} className="p-4">
-          {receiptBlock}
-          {headerBlock}
-          {topSections}
-        </div>
-        <div ref={measureAdditionalRef} className="p-4">
-          {additionalSection}
-        </div>
-        <div ref={measureContinuationHeaderRef} className="p-4">
-          {headerBlock}
-          {recipientSection}
-        </div>
+      {/*
+        Off-screen measurement surface.
+        Uses a single p-4 wrapper per logical "page" — matching the real
+        <section className="danfe-page p-4"> — so that heights are measured
+        in the same padding context as the actual rendered pages.
+        Previously each group had its own p-4, double-counting 32 px per group.
+      */}
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none">
+        {/* First page: all static content shares one p-4, just like the real page */}
         <div className="p-4">
-          <ProductsTable items={det} rowRefs={measureRowRefs} headRef={measureProductsHeadRef} />
+          <div ref={measureFirstPageRef}>
+            {receiptBlock}
+            {headerBlock}
+            {topSections}
+          </div>
+          <div ref={measureAdditionalRef}>
+            {additionalSection}
+          </div>
+          <ProductsTable items={det} rowRefs={measureRowRefs} headRef={measureProductsHeadRef} titleRef={measureProductsTitleRef} />
+        </div>
+        {/* Continuation page header: only headerBlock (recipientSection is NOT rendered on continuation pages) */}
+        <div className="p-4">
+          <div ref={measureContinuationHeaderRef}>
+            {headerBlock}
+          </div>
         </div>
       </div>
     </div>
