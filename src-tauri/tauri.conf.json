@@ -65,6 +65,14 @@
         "languages": ["PortugueseBR"],
         "displayLanguageSelector": false
       }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
     }
   }
 }

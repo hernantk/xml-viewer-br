@@ -5989,6 +5989,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "log",
+ "open",
  "roxmltree",
  "serde",
  "serde_json",
