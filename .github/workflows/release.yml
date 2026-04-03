@@ -146,47 +146,47 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────
   # macOS Universal  →  .dmg (Intel x86_64 + Apple Silicon — lipo merge)
   # ─────────────────────────────────────────────────────────────────────
-  build-macos-universal:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+  # build-macos-universal:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v5
+  #       with:
+  #         node-version: "24"
 
-      - name: Instalar dependências npm
-        run: npm ci
+  #     - name: Instalar dependências npm
+  #       run: npm ci
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
+  #     - name: Setup Rust toolchain
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         targets: x86_64-apple-darwin,aarch64-apple-darwin
 
-      - name: Cache de build Rust
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: "./src-tauri -> target"
+  #     - name: Cache de build Rust
+  #       uses: swatinem/rust-cache@v2
+  #       with:
+  #         workspaces: "./src-tauri -> target"
 
-      - name: Build e publicação com Tauri
-        uses: tauri-apps/tauri-action@v0.5.25
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Opcionais — se configurados, assina e notariza o .dmg (Gatekeeper)
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "XML Viewer BR ${{ github.ref_name }}"
-          releaseDraft: true
-          prerelease: false
-          tauriScript: npm run tauri
-          args: --target universal-apple-darwin
+  #     - name: Build e publicação com Tauri
+  #       uses: tauri-apps/tauri-action@v0.5.25
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #         # Opcionais — se configurados, assina e notariza o .dmg (Gatekeeper)
+  #         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+  #         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+  #         APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+  #         APPLE_ID: ${{ secrets.APPLE_ID }}
+  #         APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+  #         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  #       with:
+  #         tagName: ${{ github.ref_name }}
+  #         releaseName: "XML Viewer BR ${{ github.ref_name }}"
+  #         releaseDraft: true
+  #         prerelease: false
+  #         tauriScript: npm run tauri
+  #         args: --target universal-apple-darwin
