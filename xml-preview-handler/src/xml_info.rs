@@ -428,4 +428,57 @@ mod tests {
         let key = "12345678901234567890123456789012345678901234";
         assert_eq!(format_chave(key).len(), 44 + 10); // 44 digits + 10 spaces
     }
+
+    #[test]
+    fn test_parse_nfe() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe Id="NFe35240112345678000195550010000001231234567890" versao="4.00">
+      <ide>
+        <nNF>123</nNF>
+        <serie>1</serie>
+        <dhEmi>2024-01-15T10:30:00-03:00</dhEmi>
+        <tpAmb>1</tpAmb>
+      </ide>
+      <emit>
+        <xNome>Empresa Teste Ltda</xNome>
+        <CNPJ>12345678000195</CNPJ>
+      </emit>
+      <dest>
+        <xNome>Cliente Teste</xNome>
+      </dest>
+      <total>
+        <ICMSTot>
+          <vNF>1234.56</vNF>
+        </ICMSTot>
+      </total>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <nProt>135240000000001</nProt>
+    </infProt>
+  </protNFe>
+</nfeProc>"#;
+
+        let info = parse(xml);
+        assert_eq!(info.doc_type, DocType::Nfe);
+        assert_eq!(info.numero, "123");
+        assert_eq!(info.serie, "1");
+        assert_eq!(info.data_emissao, "15/01/2024 10:30");
+        assert_eq!(info.emitente_nome, "Empresa Teste Ltda");
+        assert_eq!(info.emitente_cnpj, "12.345.678/0001-95");
+        assert_eq!(info.destinatario_nome, "Cliente Teste");
+        assert_eq!(info.valor_total, "R$ 1.234,56");
+        assert_eq!(info.protocolo, "135240000000001");
+        assert_eq!(info.ambiente, "Produção");
+    }
+
+    #[test]
+    fn test_parse_unknown_xml() {
+        let xml = r#"<?xml version="1.0"?><root><item>test</item></root>"#;
+        let info = parse(xml);
+        assert_eq!(info.doc_type, DocType::Unknown);
+    }
 }

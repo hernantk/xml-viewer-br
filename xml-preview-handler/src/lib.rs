@@ -130,12 +130,25 @@ mod dll {
         if len == 0 { return E_FAIL; }
         let dll_path = String::from_utf16_lossy(&path_buf[..len as usize]);
 
-        // 1. Shell extension for .xml
+        // 1a. Shell extension for .xml (extension-level)
         let ext_key = format!("Software\\Classes\\.xml\\shellex\\{}", CLSID_PREVIEW_HANDLER_EXT);
         if let Some(hk) = create_key(root, &ext_key) {
             let _ = set_str(hk, "", OUR_CLSID_STR);
             let _ = RegCloseKey(hk);
         } else { return E_FAIL; }
+
+        // 1b. SystemFileAssociations — ensures the handler is used even when
+        //     another application (e.g. Tauri's own file association) owns the
+        //     ProgID for .xml via UserChoice.  Windows checks this path before
+        //     falling back to the PerceivedType-based text previewer.
+        let sfa_key = format!(
+            "Software\\Classes\\SystemFileAssociations\\.xml\\shellex\\{}",
+            CLSID_PREVIEW_HANDLER_EXT
+        );
+        if let Some(hk) = create_key(root, &sfa_key) {
+            let _ = set_str(hk, "", OUR_CLSID_STR);
+            let _ = RegCloseKey(hk);
+        }
 
         // 2. InProcServer32
         let inproc_key = format!("Software\\Classes\\CLSID\\{}\\InProcServer32", OUR_CLSID_STR);
@@ -179,6 +192,12 @@ mod dll {
     unsafe fn remove_registry(root: HKEY) {
         let ext_key = format!("Software\\Classes\\.xml\\shellex\\{}", CLSID_PREVIEW_HANDLER_EXT);
         delete_key(root, &ext_key);
+
+        let sfa_key = format!(
+            "Software\\Classes\\SystemFileAssociations\\.xml\\shellex\\{}",
+            CLSID_PREVIEW_HANDLER_EXT
+        );
+        delete_key(root, &sfa_key);
 
         let clsid_key = format!("Software\\Classes\\CLSID\\{}", OUR_CLSID_STR);
         delete_key(root, &clsid_key);
