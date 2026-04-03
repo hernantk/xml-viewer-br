@@ -57,6 +57,7 @@ jobs:
           releaseName: "XML Viewer BR ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+          tauriScript: npm run tauri
           args: --target x86_64-unknown-linux-gnu
 
   # ─────────────────────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ jobs:
           releaseName: "XML Viewer BR ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+          tauriScript: npm run tauri
           args: --target x86_64-pc-windows-msvc
 
   # ─────────────────────────────────────────────────────────────────────
@@ -138,6 +140,7 @@ jobs:
           releaseName: "XML Viewer BR ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+          tauriScript: npm run tauri
           args: --target aarch64-pc-windows-msvc
 
   # ─────────────────────────────────────────────────────────────────────
@@ -185,4 +188,5 @@ jobs:
           releaseName: "XML Viewer BR ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+          tauriScript: npm run tauri
           args: --target universal-apple-darwin
