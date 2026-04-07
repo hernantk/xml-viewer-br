@@ -6,6 +6,7 @@ import type {
   ValidationResult,
 } from "@/types/common";
 import { parseXml } from "@/services/xmlParser";
+import { persistToFile } from "@/utils/persistentStorage";
 
 interface DocumentState {
   currentDocument: ParsedDocument | null;
@@ -267,6 +268,9 @@ function persistRecentFiles(
       .map((entry) => [entry.id, xmlCache[entry.id]]),
   );
   localStorage.setItem(RECENT_CACHE_KEY, JSON.stringify(trimmedCache));
+
+  // Mirror to filesystem so data survives app updates
+  void persistToFile();
 }
 
 async function readFilesystemFile(path: string): Promise<string> {
@@ -384,6 +388,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     localStorage.setItem("xmlviewer-theme", newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
     set({ theme: newTheme });
+    void persistToFile();
   },
 
   setLoading: (loading) => set({ loading }),
@@ -395,13 +400,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const current = get().recentFiles;
     const trimmed = current.slice(0, clamped);
     const xmlCache = getRecentFileCache();
-    persistRecentFiles(trimmed, xmlCache);
+    persistRecentFiles(trimmed, xmlCache); // already calls persistToFile()
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
   },
 
   setDownloadDir: (dir: string) => {
     localStorage.setItem(DOWNLOAD_DIR_KEY, dir);
     set({ downloadDir: dir });
+    void persistToFile();
   },
 
   initializeDownloadDir: async () => {
@@ -462,6 +468,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       currentMax = newLimit;
       limitIncreased = true;
       set({ maxRecentFiles: newLimit });
+      // persistToFile() will be called by persistRecentFiles() below
     }
 
     let loaded = 0;

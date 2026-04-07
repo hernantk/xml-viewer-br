@@ -16,7 +16,8 @@
       "allow": [
         { "path": "$TEMP/**" },
         { "path": "$DOWNLOAD/**" },
-        { "path": "$HOME/**" }
+        { "path": "$HOME/**" },
+        { "path": "$APPDATA/**" }
       ]
     },
     "opener:default",
