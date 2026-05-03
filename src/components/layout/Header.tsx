@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FolderOpen,
   FileDown,
@@ -50,6 +50,20 @@ export function Header({
   const batchPdf = useBatchPdfExport({ initialOutputDir: downloadDir });
   const showBatchButton = isTauriRuntime();
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key.toLowerCase() === "p"
+      ) {
+        e.preventDefault();
+        printPdf();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [printPdf]);
+
   return (
     <>
     <header className="h-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 no-print">
@@ -89,7 +103,7 @@ export function Header({
             onClick={exportPdf}
             disabled={exporting}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-            title="Exportar PDF (Ctrl+P)"
+            title="Exportar PDF"
           >
             <FileDown size={16} />
             {exporting ? "Exportando..." : "PDF"}
