@@ -49,6 +49,7 @@ export interface Emit {
   xFant?: string;
   enderEmit: Endereco;
   IE: string;
+  IM?: string;
   CRT: string;
   CNAE?: string;
 }
@@ -162,6 +163,13 @@ export interface Transp {
   modFrete: string;
   transporta?: Transporta;
   vol?: Vol[];
+  veicTransp?: VeicTransp;
+}
+
+export interface VeicTransp {
+  placa: string;
+  UF: string;
+  RNTRC?: string;
 }
 
 export interface Transporta {

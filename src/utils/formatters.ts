@@ -113,3 +113,23 @@ export const MODAL_TRANSPORTE: Record<string, string> = {
   "05": "Dutoviário",
   "06": "Multimodal",
 };
+
+export const FORMA_PAGAMENTO: Record<string, string> = {
+  "01": "Dinheiro",
+  "02": "Cheque",
+  "03": "Cartão de Crédito",
+  "04": "Cartão de Débito",
+  "05": "Crédito Loja",
+  "10": "Vale Alimentação",
+  "11": "Vale Refeição",
+  "12": "Vale Presente",
+  "13": "Vale Combustível",
+  "14": "Duplicata Mercantil",
+  "15": "Boleto Bancário",
+  "16": "Depósito Bancário",
+  "17": "PIX",
+  "18": "Transferência Bancária",
+  "19": "Programa de Fidelidade",
+  "90": "Sem Pagamento",
+  "99": "Outros",
+};

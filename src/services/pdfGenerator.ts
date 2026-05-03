@@ -64,12 +64,15 @@ export async function generatePdfFromElement(
   clone.style.padding = "0";
   clone.style.margin = "0";
   clone.style.boxShadow = "none";
+  clone.style.fontFamily = "'Times New Roman', Times, serif";
 
   removeDarkClasses(clone);
   forceWhiteBackgrounds(clone);
   prepareCloneForPdf(clone);
 
   document.body.appendChild(clone);
+
+  await convertSvgsToImages(clone);
 
   try {
     const pdf = new jsPDF({
@@ -114,6 +117,50 @@ export async function generatePdfFromElement(
   } finally {
     if (clone.parentNode) document.body.removeChild(clone);
   }
+}
+
+async function convertSvgsToImages(root: HTMLElement): Promise<void> {
+  const svgs = root.querySelectorAll("svg");
+  if (svgs.length === 0) return;
+
+  const conversions: Promise<void>[] = [];
+  svgs.forEach((svg) => {
+    const clone = svg.cloneNode(true) as SVGElement;
+    const svgString = new XMLSerializer().serializeToString(clone);
+    const svgDataUrl =
+      "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
+
+    const width = svg.clientWidth || svg.getBoundingClientRect().width || 200;
+    const height = svg.clientHeight || svg.getBoundingClientRect().height || 40;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width * CAPTURE_SCALE;
+    canvas.height = height * CAPTURE_SCALE;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.style.display = svg.style.display || "block";
+
+    const promise = new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        svg.parentNode?.replaceChild(canvas, svg);
+        resolve();
+      };
+      img.onerror = () => {
+        resolve();
+      };
+      img.src = svgDataUrl;
+    });
+    conversions.push(promise);
+  });
+
+  await Promise.all(conversions);
 }
 
 function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
@@ -175,7 +222,12 @@ function forceWhiteBackgrounds(el: HTMLElement) {
       c.startsWith("bg-"),
     );
     bgClasses.forEach((c) => {
-      if (c !== "bg-white" && c !== "bg-transparent") {
+      if (
+        c !== "bg-white" &&
+        c !== "bg-transparent" &&
+        c !== "bg-gray-100" &&
+        c !== "bg-gray-200"
+      ) {
         el.classList.remove(c);
       }
     });

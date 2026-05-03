@@ -1,5 +1,5 @@
 import type { ParsedDocument, DocumentType } from "@/types/common";
-import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
+import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
 import type { Cte, InfCte, IdeCte, EmitCte, PartyCte, VPrest, ImpCte, IcmsCte, InfCTeNorm, InfCarga, InfDoc, InfModal, ComplCte, ProtCTe } from "@/types/cte";
 import type { CompNfse, InfNfse, ValoresNfse, PrestadorServico, TomadorServico, EnderecoNfse, Contato, OrgaoGerador, DeclaracaoPrestacaoServico, Servico, ValoresServico } from "@/types/nfse";
 
@@ -151,6 +151,7 @@ function parseEmit(el: Element): Emit {
     xFant: getTxt(el, "xFant") || undefined,
     enderEmit: parseEndereco(enderEl),
     IE: getTxt(el, "IE"),
+    IM: getTxt(el, "IM") || undefined,
     CRT: getTxt(el, "CRT"),
     CNAE: getTxt(el, "CNAE") || undefined,
   };
@@ -305,10 +306,20 @@ function parseICMSTot(el: Element): ICMSTot {
 function parseTransp(el: Element): Transp {
   const transportaEl = getEl(el, "transporta");
   const volEls = getElAll(el, "vol");
+  const veicTranspEl = getEl(el, "veicTransp");
   return {
     modFrete: getTxt(el, "modFrete"),
     transporta: transportaEl ? parseTransporta(transportaEl) : undefined,
     vol: volEls.length > 0 ? volEls.map(parseVol) : undefined,
+    veicTransp: veicTranspEl ? parseVeicTransp(veicTranspEl) : undefined,
+  };
+}
+
+function parseVeicTransp(el: Element): VeicTransp {
+  return {
+    placa: getTxt(el, "placa"),
+    UF: getTxt(el, "UF"),
+    RNTRC: getTxt(el, "RNTRC") || undefined,
   };
 }
 
