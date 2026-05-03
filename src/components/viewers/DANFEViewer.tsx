@@ -117,7 +117,7 @@ function DanfeHeaderBlock({
     <div className="border border-black" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-0">
         {/* Left: Emitente */}
-        <div className="border-r border-black p-[3pt] flex flex-col justify-center">
+        <div className="border-r border-black p-[3pt] flex flex-col items-center justify-center text-center">
           <div className="text-[6pt] italic leading-[1.1]">IDENTIFICAÇÃO DO EMITENTE</div>
           <div className="text-[12pt] font-bold leading-[1.1] mt-[2pt]">{emit.xNome}</div>
           {emit.xFant && (
