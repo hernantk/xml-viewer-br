@@ -143,7 +143,52 @@ export function usePdfExport() {
 
     setPrinting(true);
     try {
-      window.print();
+      const defaultName = getPdfBaseName(currentDocument);
+      const tauriRuntime = isTauriRuntime();
+
+      if (tauriRuntime) {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const sep = downloadDir.includes("\\") ? "\\" : "/";
+        const tmpPath = downloadDir
+          ? `${downloadDir}${sep}_temp_print_${defaultName}.pdf`
+          : (await (async () => {
+              const { appLocalDataDir } = await import("@tauri-apps/api/path");
+              return `${await appLocalDataDir()}${sep}_temp_print_${defaultName}.pdf`;
+            })());
+
+        try {
+          await invoke("print_to_pdf", { outputPath: tmpPath });
+        } catch {
+          const viewerEl = document.getElementById("document-viewer-content");
+          if (!viewerEl) throw new Error("Elemento do viewer nao encontrado");
+          const { generatePdfFromElement } = await import("@/services/pdfGenerator");
+          const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+          const { writeFile } = await import("@tauri-apps/plugin-fs");
+          await writeFile(tmpPath, pdfBytes);
+        }
+
+        try {
+          await invoke("print_file", { path: tmpPath });
+        } catch {
+          alert(`PDF gerado em: ${tmpPath}. Abra o arquivo manualmente para imprimir.`);
+        }
+      } else {
+        const viewerEl = document.getElementById("document-viewer-content");
+        if (!viewerEl) throw new Error("Elemento do viewer nao encontrado");
+
+        const { generatePdfFromElement } = await import("@/services/pdfGenerator");
+        const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+
+        const printWindow = window.open(url, "_blank");
+        if (!printWindow) {
+          URL.revokeObjectURL(url);
+          throw new Error("Popup bloqueado. Permita popups para este site.");
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
+      }
     } catch (err) {
       console.error("Erro ao imprimir:", err);
       alert(
@@ -153,7 +198,7 @@ export function usePdfExport() {
     } finally {
       setPrinting(false);
     }
-  }, [currentDocument]);
+  }, [currentDocument, downloadDir]);
 
   return { exportPdf, exporting, printPdf, printing, exportNotice };
 }
