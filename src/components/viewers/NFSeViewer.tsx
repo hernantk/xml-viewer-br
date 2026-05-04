@@ -29,7 +29,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
+    <div className={`rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
       <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
         {label}
       </div>
@@ -50,7 +50,7 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
+    <div className={`rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
       <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
         {label}
       </div>
@@ -80,13 +80,13 @@ export function NFSeViewer({ nfse }: Props) {
   const measureRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const headerBlock = (
-    <div className="border border-black dark:border-gray-400">
-      <div className="p-3 text-center">
+    <div>
+      <div className="rounded border border-black dark:border-gray-400 p-3 text-center">
         <div className="text-lg font-bold tracking-wider">
           NOTA FISCAL DE SERVIÇO ELETRÔNICA - NFS-e
         </div>
       </div>
-      <div className="grid grid-cols-3 border-t border-black dark:border-gray-400">
+      <div className="grid grid-cols-3">
         <Field label="Número da NFS-e" value={infNfse.numero} />
         <Field label="Data de Emissão" value={formatDate(infNfse.dataEmissao)} />
         <Field label="Código de Verificação" value={infNfse.codigoVerificacao} />
@@ -95,7 +95,7 @@ export function NFSeViewer({ nfse }: Props) {
   );
 
   const providerBlock = (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>Prestador de Serviços</SectionTitle>
       <div className="grid grid-cols-[1fr_170px_150px]">
         <Field label="Razão Social" value={prestador.razaoSocial} />
@@ -137,7 +137,7 @@ export function NFSeViewer({ nfse }: Props) {
 
   const customerBlock =
     tomador && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>Tomador de Serviços</SectionTitle>
         <div className="grid grid-cols-[1fr_170px]">
           <Field label="Razão Social" value={tomador.razaoSocial} />
@@ -176,7 +176,7 @@ export function NFSeViewer({ nfse }: Props) {
 
   const serviceBlock =
     servico && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>Discriminação do Serviço</SectionTitle>
         <div className="grid grid-cols-3">
           <Field label="Item Lista Serviço" value={servico.itemListaServico} />
@@ -186,7 +186,7 @@ export function NFSeViewer({ nfse }: Props) {
             value={servico.codigoTributacaoMunicipio || ""}
           />
         </div>
-        <div className="border border-gray-300 dark:border-gray-600 px-1.5 py-1">
+        <div className="rounded border border-gray-300 dark:border-gray-600 px-1.5 py-1">
           <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase mb-0.5">
             Discriminação
           </div>
@@ -199,7 +199,7 @@ export function NFSeViewer({ nfse }: Props) {
 
   const valuesBlock =
     valores && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>Valores</SectionTitle>
         <div className="grid grid-cols-4">
           <FieldRight
@@ -266,7 +266,7 @@ export function NFSeViewer({ nfse }: Props) {
     );
 
   const nfseValuesBlock = (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>Valores da NFS-e</SectionTitle>
       <div className="grid grid-cols-4">
         <FieldRight
@@ -298,9 +298,9 @@ export function NFSeViewer({ nfse }: Props) {
 
   const othersBlock =
     infNfse.outrasInformacoes && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>Outras Informações</SectionTitle>
-        <div className="border border-gray-300 dark:border-gray-600 px-1.5 py-1">
+        <div className="rounded border border-gray-300 dark:border-gray-600 px-1.5 py-1">
           <div className="text-[8px] whitespace-pre-wrap">{infNfse.outrasInformacoes}</div>
         </div>
       </div>

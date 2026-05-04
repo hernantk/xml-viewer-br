@@ -40,7 +40,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
+    <div className={`rounded rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
       <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
         {label}
       </div>
@@ -61,7 +61,7 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
+    <div className={`rounded rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
       <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
         {label}
       </div>
@@ -126,7 +126,7 @@ function PartyBlock({
 }) {
   if (!party) return null;
   return (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>{title}</SectionTitle>
       <div className="grid grid-cols-[1fr_170px_130px]">
         <Field label="Nome / RazÃ£o Social" value={party.xNome} />
@@ -156,9 +156,9 @@ export function DACTeViewer({ cte }: Props) {
   const measureRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const receiptBlock = (
-    <div className="border border-black dark:border-gray-400">
+    <div>
       <div className="grid grid-cols-[1fr_auto] gap-0">
-        <div className="border-r border-black dark:border-gray-400 p-1.5">
+        <div className="rounded border border-black dark:border-gray-400 p-1.5">
           <div className="text-[8px] leading-snug">
             RECEBEMOS DE <span className="font-bold">{emit.xNome}</span> OS
             SERVIÃ‡OS CONSTANTES DO CONHECIMENTO DE TRANSPORTE ELETRÃ”NICO INDICADO
@@ -169,7 +169,7 @@ export function DACTeViewer({ cte }: Props) {
             <Field label="IdentificaÃ§Ã£o e Assinatura do Recebedor" value="" />
           </div>
         </div>
-        <div className="p-2 text-center min-w-[110px] flex flex-col justify-center">
+        <div className="rounded border border-black dark:border-gray-400 p-2 text-center min-w-[110px] flex flex-col justify-center">
           <div className="text-base font-bold">CT-e</div>
           <div className="text-[9px] mt-0.5">
             N.Âº <span className="font-bold">{ide.nCT}</span>
@@ -187,9 +187,9 @@ export function DACTeViewer({ cte }: Props) {
   );
 
   const headerBlock = (
-    <div className="border border-black dark:border-gray-400">
+    <div>
       <div className="grid grid-cols-[1fr_140px_1fr] gap-0">
-        <div className="border-r border-black dark:border-gray-400 p-2 flex flex-col justify-center">
+        <div className="rounded border border-black dark:border-gray-400 p-2 flex flex-col justify-center">
           <div className="text-xs font-bold leading-tight">{emit.xNome}</div>
           {emit.xFant && (
             <div className="text-[9px] text-gray-600 dark:text-gray-400">
@@ -207,7 +207,7 @@ export function DACTeViewer({ cte }: Props) {
           </div>
         </div>
 
-        <div className="border-r border-black dark:border-gray-400 p-2 text-center flex flex-col items-center justify-center">
+        <div className="rounded border border-black dark:border-gray-400 p-2 text-center flex flex-col items-center justify-center">
           <div className="text-lg font-bold tracking-wider">DACTE</div>
           <div className="text-[7px] leading-tight text-gray-600 dark:text-gray-400">
             Documento Auxiliar do
@@ -230,7 +230,7 @@ export function DACTeViewer({ cte }: Props) {
           </div>
         </div>
 
-        <div className="p-2 flex flex-col items-center justify-between">
+        <div className="rounded border border-black dark:border-gray-400 p-2 flex flex-col items-center justify-between">
           <div className="w-full px-2">
             <Barcode value={accessKey} />
           </div>
@@ -263,7 +263,7 @@ export function DACTeViewer({ cte }: Props) {
   );
 
   const valuesBlock = (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>Valores da PrestaÃ§Ã£o do ServiÃ§o</SectionTitle>
       <div className="grid grid-cols-3">
         <FieldRight
@@ -271,7 +271,7 @@ export function DACTeViewer({ cte }: Props) {
           value={formatCurrency(vPrest.vTPrest)}
         />
         <FieldRight label="Valor a Receber" value={formatCurrency(vPrest.vRec)} />
-        <div className="border border-gray-300 dark:border-gray-600 px-1 py-0.5">
+        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
           <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
             Componentes
           </div>
@@ -287,7 +287,7 @@ export function DACTeViewer({ cte }: Props) {
   );
 
   const taxesBlock = (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>InformaÃ§Ãµes Relativas ao Imposto</SectionTitle>
       <div className="grid grid-cols-5">
         <Field label="SituaÃ§Ã£o TributÃ¡ria" value={imp.ICMS.CST} />
@@ -313,7 +313,7 @@ export function DACTeViewer({ cte }: Props) {
 
   const cargoBlock =
     infCTeNorm && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>InformaÃ§Ãµes da Carga</SectionTitle>
         <div className="grid grid-cols-3">
           <Field label="Produto Predominante" value={infCTeNorm.infCarga.proPred} />
@@ -325,7 +325,7 @@ export function DACTeViewer({ cte }: Props) {
                 : ""
             }
           />
-          <div className="border border-gray-300 dark:border-gray-600 px-1 py-0.5">
+          <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
             <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
               Quantidades
             </div>
@@ -343,7 +343,7 @@ export function DACTeViewer({ cte }: Props) {
   const docsBlock =
     infCTeNorm?.infDoc?.infNFe &&
     infCTeNorm.infDoc.infNFe.length > 0 && (
-      <div className="border border-t-0 border-black dark:border-gray-400">
+      <div>
         <SectionTitle>Documentos OriginÃ¡rios</SectionTitle>
         <div className="px-1 py-0.5 space-y-0.5">
           {infCTeNorm.infDoc.infNFe.map((nf, i) => (
@@ -356,10 +356,10 @@ export function DACTeViewer({ cte }: Props) {
     );
 
   const additionalBlock = (
-    <div className="border border-t-0 border-black dark:border-gray-400">
+    <div>
       <SectionTitle>Dados Adicionais</SectionTitle>
       <div className="grid grid-cols-2">
-        <div className="border border-gray-300 dark:border-gray-600 px-1 py-0.5">
+        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
           <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
             InformaÃ§Ãµes Complementares
           </div>
@@ -367,7 +367,7 @@ export function DACTeViewer({ cte }: Props) {
             {infAdic?.infCpl || "\u00A0"}
           </div>
         </div>
-        <div className="border border-gray-300 dark:border-gray-600 px-1 py-0.5">
+        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
           <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
             Reservado ao Fisco
           </div>
