@@ -10,6 +10,7 @@ import {
   formatAccessKey,
   formatPhone,
   formatCEP,
+  formatNFNumber,
   MODAL_TRANSPORTE,
 } from "@/utils/formatters";
 import {
@@ -40,11 +41,11 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
-      <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
+    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+      <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10px] font-medium leading-tight break-words">
+      <div className="text-[10pt] font-bold leading-[1.1] break-words">
         {value || "\u00A0"}
       </div>
     </div>
@@ -61,11 +62,11 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
-      <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
+    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+      <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10px] font-medium leading-tight text-right">
+      <div className="text-[10pt] font-bold leading-[1.1] text-right">
         {value || "\u00A0"}
       </div>
     </div>
@@ -97,7 +98,7 @@ function Barcode({ value }: { value: string }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide border-b border-gray-300 dark:border-gray-600">
+    <div className="bg-gray-200 px-[2pt] py-[1pt] text-[7pt] font-bold uppercase leading-[1.1] border-b border-black">
       {children}
     </div>
   );
@@ -157,24 +158,24 @@ export function DACTeViewer({ cte }: Props) {
 
   const receiptBlock = (
     <div>
-      <div className="grid grid-cols-[1fr_auto] gap-0">
-        <div className="rounded border border-black dark:border-gray-400 p-1.5">
-          <div className="text-[8px] leading-snug">
+        <div className="grid grid-cols-[1fr_auto] gap-0">
+        <div className="rounded border border-black p-[3pt]">
+          <div className="text-[7pt] leading-[1.2]">
             RECEBEMOS DE <span className="font-bold">{emit.xNome}</span> OS
             SERVIÃ‡OS CONSTANTES DO CONHECIMENTO DE TRANSPORTE ELETRÃ”NICO INDICADO
             AO LADO.
           </div>
-          <div className="grid grid-cols-2 mt-1.5 border-t border-gray-300 dark:border-gray-600 pt-1">
+          <div className="grid grid-cols-2 mt-[3pt] border-t border-black pt-[2pt]">
             <Field label="Data de Recebimento" value="" />
             <Field label="IdentificaÃ§Ã£o e Assinatura do Recebedor" value="" />
           </div>
         </div>
-        <div className="rounded border border-black dark:border-gray-400 p-2 text-center min-w-[110px] flex flex-col justify-center">
-          <div className="text-base font-bold">CT-e</div>
-          <div className="text-[9px] mt-0.5">
+        <div className="rounded border border-black p-[3pt] text-center min-w-[110px] flex flex-col justify-center">
+          <div className="text-[14pt] font-bold">CT-e</div>
+          <div className="text-[10pt] font-bold mt-[2pt]">
             N.Âº <span className="font-bold">{ide.nCT}</span>
           </div>
-          <div className="text-[9px]">
+          <div className="text-[10pt] font-bold">
             SÃ©rie <span className="font-bold">{ide.serie}</span>
           </div>
         </div>
@@ -183,46 +184,47 @@ export function DACTeViewer({ cte }: Props) {
   );
 
   const separatorBlock = (
-    <div className="border-b border-dashed border-gray-400 dark:border-gray-500 my-1.5" />
+    <div className="border-b border-dashed border-black my-[3pt]" />
   );
 
   const headerBlock = (
     <div>
       <div className="grid grid-cols-[1fr_140px_1fr] gap-0">
-        <div className="rounded border border-black dark:border-gray-400 p-2 flex flex-col justify-center">
-          <div className="text-xs font-bold leading-tight">{emit.xNome}</div>
+        <div className="rounded border border-black p-[3pt] flex flex-col justify-center">
+          <div className="text-[12pt] font-bold leading-[1.1]">{emit.xNome}</div>
           {emit.xFant && (
-            <div className="text-[9px] text-gray-600 dark:text-gray-400">
+            <div className="text-[8pt] leading-[1.1]">
               {emit.xFant}
             </div>
           )}
-          <div className="text-[9px] mt-1 leading-snug">
+          <div className="text-[8pt] mt-[2pt] leading-[1.1]">
             {emit.enderEmit.xLgr}, {emit.enderEmit.nro}
           </div>
-          <div className="text-[9px] leading-snug">
-            {emit.enderEmit.xBairro} - {emit.enderEmit.xMun}/{emit.enderEmit.UF}
+          <div className="text-[8pt] leading-[1.1]">
+            {emit.enderEmit.xBairro} - {emit.enderEmit.CEP ? formatCEP(emit.enderEmit.CEP) : emit.enderEmit.cMun}
           </div>
-          <div className="text-[9px] leading-snug">
-            CNPJ: {formatCNPJorCPF(emit.CNPJ)} - IE: {emit.IE}
+          <div className="text-[8pt] leading-[1.1]">
+            {emit.enderEmit.xMun}/{emit.enderEmit.UF}
+            {emit.enderEmit.fone ? ` Fone: ${formatPhone(emit.enderEmit.fone)}` : ""}
           </div>
         </div>
 
-        <div className="rounded border border-black dark:border-gray-400 p-2 text-center flex flex-col items-center justify-center">
-          <div className="text-lg font-bold tracking-wider">DACTE</div>
-          <div className="text-[7px] leading-tight text-gray-600 dark:text-gray-400">
+        <div className="rounded border border-black p-[3pt] text-center flex flex-col items-center justify-center">
+          <div className="text-[14pt] font-bold tracking-wider">DACTE</div>
+          <div className="text-[8pt] leading-[1.1]">
             Documento Auxiliar do
             <br />
             Conhecimento de Transporte
             <br />
             EletrÃ´nico
           </div>
-          <div className="mt-1 text-[9px]">
-            CT-e N.Âº <span className="font-bold">{ide.nCT}</span>
+          <div className="mt-[2pt] text-[10pt] font-bold">
+            CT-e N.Âº <span className="font-bold">{formatNFNumber(ide.nCT)}</span>
           </div>
-          <div className="text-[9px]">
+          <div className="text-[10pt] font-bold">
             SÃ©rie <span className="font-bold">{ide.serie}</span>
           </div>
-          <div className="text-[9px] mt-1">
+          <div className="text-[8pt] mt-[2pt] leading-[1.1]">
             Modal:{" "}
             <span className="font-bold">
               {MODAL_TRANSPORTE[ide.modal] || ide.modal}
@@ -230,20 +232,20 @@ export function DACTeViewer({ cte }: Props) {
           </div>
         </div>
 
-        <div className="rounded border border-black dark:border-gray-400 p-2 flex flex-col items-center justify-between">
+        <div className="rounded border border-black p-[3pt] flex flex-col items-center justify-between">
           <div className="w-full px-2">
             <Barcode value={accessKey} />
           </div>
-          <div className="text-[8px] text-center font-mono tracking-wider break-all mt-1">
+          <div className="text-[8pt] text-center font-bold leading-[1.1] break-all mt-[2pt]">
             {formatAccessKey(accessKey)}
           </div>
-          <div className="text-[7px] text-center text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+          <div className="text-[8pt] text-center leading-[1.1] mt-[1pt]">
             Consulta de autenticidade no portal nacional do CT-e
             <br />
             www.cte.fazenda.gov.br/portal
           </div>
           {protCTe && (
-            <div className="text-[8px] text-center mt-1 leading-snug">
+            <div className="text-[8pt] text-center mt-[1pt] leading-[1.1]">
               <div>
                 Protocolo: <span className="font-bold">{protCTe.infProt.nProt}</span>
               </div>
@@ -253,7 +255,7 @@ export function DACTeViewer({ cte }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 border-t border-black dark:border-gray-400">
+      <div className="grid grid-cols-4 border-t border-black">
         <Field label="CFOP" value={`${ide.CFOP} - ${ide.natOp}`} />
         <Field label="Data de EmissÃ£o" value={formatDate(ide.dhEmi)} />
         <Field label="Origem" value={`${ide.xMunIni}/${ide.UFIni}`} />
@@ -271,14 +273,14 @@ export function DACTeViewer({ cte }: Props) {
           value={formatCurrency(vPrest.vTPrest)}
         />
         <FieldRight label="Valor a Receber" value={formatCurrency(vPrest.vRec)} />
-        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
-          <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
+        <div className="rounded border border-black px-[2pt] py-[1pt]">
+          <div className="text-[6pt] leading-[1.1] uppercase">
             Componentes
           </div>
           {vPrest.comp?.map((c, i) => (
-            <div key={i} className="text-[8px] flex justify-between">
+            <div key={i} className="text-[8pt] flex justify-between leading-[1.1]">
               <span>{c.xNome}</span>
-              <span className="font-medium">{formatCurrency(c.vComp)}</span>
+              <span className="font-bold">{formatCurrency(c.vComp)}</span>
             </div>
           ))}
         </div>
@@ -325,14 +327,14 @@ export function DACTeViewer({ cte }: Props) {
                 : ""
             }
           />
-          <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
-            <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
+          <div className="rounded border border-black px-[2pt] py-[1pt]">
+            <div className="text-[6pt] leading-[1.1] uppercase">
               Quantidades
             </div>
             {infCTeNorm.infCarga.infQ.map((q, i) => (
-              <div key={i} className="text-[8px] flex justify-between">
+              <div key={i} className="text-[8pt] flex justify-between leading-[1.1]">
                 <span>{q.tpMed}</span>
-                <span className="font-medium">{formatQuantity(q.qCarga)}</span>
+                <span className="font-bold">{formatQuantity(q.qCarga)}</span>
               </div>
             ))}
           </div>
@@ -345,9 +347,9 @@ export function DACTeViewer({ cte }: Props) {
     infCTeNorm.infDoc.infNFe.length > 0 && (
       <div>
         <SectionTitle>Documentos OriginÃ¡rios</SectionTitle>
-        <div className="px-1 py-0.5 space-y-0.5">
+        <div className="px-[2pt] py-[1pt] space-y-[1pt]">
           {infCTeNorm.infDoc.infNFe.map((nf, i) => (
-            <div key={i} className="text-[8px] font-mono">
+            <div key={i} className="text-[8pt] leading-[1.1]">
               NF-e: {formatAccessKey(nf.chave)}
             </div>
           ))}
@@ -359,19 +361,19 @@ export function DACTeViewer({ cte }: Props) {
     <div>
       <SectionTitle>Dados Adicionais</SectionTitle>
       <div className="grid grid-cols-2">
-        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
-          <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
+        <div className="rounded border border-black px-[2pt] py-[1pt]">
+          <div className="text-[6pt] leading-[1.1] uppercase">
             InformaÃ§Ãµes Complementares
           </div>
-          <div className="text-[8px] mt-0.5 whitespace-pre-wrap min-h-[40px]">
+          <div className="text-[6pt] mt-[1pt] whitespace-pre-wrap min-h-[50px] leading-[1.1]">
             {infAdic?.infCpl || "\u00A0"}
           </div>
         </div>
-        <div className="rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5">
-          <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase">
+        <div className="rounded border border-black px-[2pt] py-[1pt]">
+          <div className="text-[6pt] leading-[1.1] uppercase">
             Reservado ao Fisco
           </div>
-          <div className="text-[8px] mt-0.5 whitespace-pre-wrap min-h-[40px]">
+          <div className="text-[6pt] mt-[1pt] whitespace-pre-wrap min-h-[50px] leading-[1.1]">
             {infAdic?.infAdFisco || "\u00A0"}
           </div>
         </div>
@@ -420,8 +422,8 @@ export function DACTeViewer({ cte }: Props) {
   const findBlock = (key: string) => contentBlocks.find((block) => block.key === key);
 
   return (
-    <div className="max-w-[210mm] mx-auto my-4 bg-white dark:bg-gray-900 shadow-lg print:shadow-none print:my-0">
-      <div className="text-black dark:text-gray-100">
+    <div className="max-w-[210mm] mx-auto my-4 bg-white shadow-lg print:shadow-none print:my-0" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="text-black">
         <div className="hidden pdf-hidden">
           {contentBlocks.map((block) => (
             <div key={block.key}>{block.node}</div>
@@ -433,11 +435,11 @@ export function DACTeViewer({ cte }: Props) {
             <div key={`page-${index + 1}`}>
               {index > 0 && (
                 <div className="pdf-hidden flex items-center py-5">
-                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
-                  <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 whitespace-nowrap">
+                  <div className="flex-1 border-t border-dashed border-gray-300" />
+                  <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap">
                     Página {index + 1}
                   </span>
-                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+                  <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
               )}
               <section className="danfe-page p-4">
@@ -450,7 +452,7 @@ export function DACTeViewer({ cte }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print">
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

@@ -29,11 +29,11 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
-      <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
+    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+      <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10px] font-medium leading-tight break-words">
+      <div className="text-[10pt] font-bold leading-[1.1] break-words">
         {value || "\u00A0"}
       </div>
     </div>
@@ -50,11 +50,11 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 ${className}`}>
-      <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase leading-tight">
+    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+      <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10px] font-medium leading-tight text-right">
+      <div className="text-[10pt] font-bold leading-[1.1] text-right">
         {value || "\u00A0"}
       </div>
     </div>
@@ -63,7 +63,7 @@ function FieldRight({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide border-b border-gray-300 dark:border-gray-600">
+    <div className="bg-gray-200 px-[2pt] py-[1pt] text-[7pt] font-bold uppercase leading-[1.1] border-b border-black">
       {children}
     </div>
   );
@@ -78,11 +78,11 @@ export function SpedNFSeViewer({ nfse }: Props) {
 
   const headerBlock = (
     <div>
-      <div className="rounded border border-black dark:border-gray-400 p-3 text-center">
-        <div className="text-lg font-bold tracking-wider">
+      <div className="rounded border border-black p-[3pt] text-center" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+        <div className="text-[14pt] font-bold tracking-wider">
           NOTA FISCAL DE SERVIÇO ELETRÔNICA - NFS-e
         </div>
-        <div className="text-[8px] text-gray-500 mt-0.5">Padrão Nacional</div>
+        <div className="text-[8pt] leading-[1.1] mt-[2pt]">Padrão Nacional</div>
       </div>
       <div className="grid grid-cols-4">
         <Field label="Número da NFS-e" value={infNFSe.nNFSe} />
@@ -160,11 +160,11 @@ export function SpedNFSeViewer({ nfse }: Props) {
       <div className="grid grid-cols-2">
         <Field label="Tributação Nacional" value={infNFSe.xTribNac} />
       </div>
-      <div className="rounded border border-gray-300 dark:border-gray-600 px-1.5 py-1">
-        <div className="text-[7px] text-gray-500 dark:text-gray-400 uppercase mb-0.5">
+      <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="text-[6pt] leading-[1.1] uppercase">
           Discriminação
         </div>
-        <div className="text-[10px] whitespace-pre-wrap min-h-[60px]">
+        <div className="text-[6pt] mt-[1pt] whitespace-pre-wrap min-h-[50px] leading-[1.1]">
           {infDps.serv.cServ.xDescServ}
         </div>
       </div>
@@ -255,8 +255,8 @@ export function SpedNFSeViewer({ nfse }: Props) {
   const findBlock = (key: string) => contentBlocks.find((block) => block.key === key);
 
   return (
-    <div className="max-w-[210mm] mx-auto my-4 bg-white dark:bg-gray-900 shadow-lg print:shadow-none print:my-0">
-      <div className="text-black dark:text-gray-100">
+    <div className="max-w-[210mm] mx-auto my-4 bg-white shadow-lg print:shadow-none print:my-0" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="text-black">
         <div className="hidden pdf-hidden">
           {contentBlocks.map((block) => (
             <div key={block.key}>{block.node}</div>
@@ -268,11 +268,11 @@ export function SpedNFSeViewer({ nfse }: Props) {
             <div key={`page-${index + 1}`}>
               {index > 0 && (
                 <div className="pdf-hidden flex items-center py-5">
-                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
-                  <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 whitespace-nowrap">
+                  <div className="flex-1 border-t border-dashed border-gray-300" />
+                  <span className="mx-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap">
                     Página {index + 1}
                   </span>
-                  <div className="flex-1 border-t border-dashed border-gray-300 dark:border-gray-700" />
+                  <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
               )}
               <section className="danfe-page p-4">
@@ -285,7 +285,7 @@ export function SpedNFSeViewer({ nfse }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print">
+      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}
