@@ -213,7 +213,7 @@ export function SpedNFSeViewer({ nfse }: Props) {
     <div>
       <SectionTitle>Informações Adicionais</SectionTitle>
       <div className="grid grid-cols-3">
-        <Field label="Ambiente" value={infNFSe.ambGer === "1" ? "Produção" : "Homologação"} />
+        <Field label="Ambiente" value={infNFSe.ambGer === "1" ? "Municipal" : "Nacional"} />
         <Field label="Status" value={statusMap[infNFSe.cStat] || infNFSe.cStat} />
         <Field label="Nº DFSe" value={infNFSe.nDFSe} />
       </div>
