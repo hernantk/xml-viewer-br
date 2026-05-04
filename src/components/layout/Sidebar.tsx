@@ -129,7 +129,9 @@ export function Sidebar() {
 
   const filteredRecentFiles = recentFiles.filter((recentFile) => {
     const matchesType =
-      typeFilter === "all" || recentFile.documentType === typeFilter;
+      typeFilter === "all" ||
+      recentFile.documentType === typeFilter ||
+      (typeFilter === "nfse" && recentFile.documentType === "nfse-sped");
 
     if (normalizedSearch.length === 0) return matchesType;
 
