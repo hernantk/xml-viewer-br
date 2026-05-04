@@ -27,6 +27,12 @@ const DOCUMENT_META: Record<DocumentType, DocumentMeta> = {
     badgeClassName:
       "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/12 dark:text-amber-300 dark:ring-amber-500/30",
   },
+  "nfse-sped": {
+    icon: Receipt,
+    label: "NFS-e (Nacional)",
+    badgeClassName:
+      "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/12 dark:text-amber-300 dark:ring-amber-500/30",
+  },
 };
 
 export function getDocumentMeta(documentType: DocumentType): DocumentMeta {

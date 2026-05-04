@@ -2,6 +2,7 @@ import { useDocumentStore } from "@/store/documentStore";
 import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
+import { SpedNFSeViewer } from "./SpedNFSeViewer";
 import { AlertTriangle, Copy, Check, Download, Loader2 } from "lucide-react";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import { useState } from "react";
@@ -51,6 +52,8 @@ export function DocumentViewer() {
   } else if (doc.documentType === "nfse" && doc.nfse) {
     const { numero } = doc.nfse.nfse.infNfse;
     documentName = `NFS-e nº ${numero}`;
+  } else if (doc.documentType === "nfse-sped" && doc.spedNfse) {
+    documentName = `NFS-e nº ${doc.spedNfse.infNFSe.nNFSe}`;
   }
 
   let chave = "";
@@ -60,6 +63,8 @@ export function DocumentViewer() {
     chave = doc.cte.infCte.id.replace(/^CTe/, "");
   } else if (doc.documentType === "nfse" && doc.nfse) {
     chave = doc.nfse.nfse.infNfse.codigoVerificacao;
+  } else if (doc.documentType === "nfse-sped" && doc.spedNfse) {
+    chave = doc.spedNfse.infNFSe.id.replace(/^NFS/, "");
   }
 
   const handleCopyKey = async () => {
@@ -121,6 +126,9 @@ export function DocumentViewer() {
       break;
     case "nfse":
       viewer = doc.nfse ? <NFSeViewer key={viewerKey} nfse={doc.nfse} /> : null;
+      break;
+    case "nfse-sped":
+      viewer = doc.spedNfse ? <SpedNFSeViewer key={viewerKey} nfse={doc.spedNfse} /> : null;
       break;
   }
 

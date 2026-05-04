@@ -133,6 +133,18 @@ function extractDocumentMeta(doc: ParsedDocument): Pick<
       nomeDestinatario: infNfse.tomadorServico?.razaoSocial ?? undefined,
     };
   }
+  if (doc.documentType === "nfse-sped" && doc.spedNfse) {
+    const { infNFSe } = doc.spedNfse;
+    const dps = infNFSe.dps?.infDPS;
+    return {
+      chave: infNFSe.id || undefined,
+      numero: infNFSe.nNFSe || undefined,
+      cnpjEmitente: infNFSe.emit.CNPJ || undefined,
+      nomeEmitente: infNFSe.emit.xNome || undefined,
+      cnpjDestinatario: dps?.toma.CNPJ ?? dps?.toma.CPF ?? undefined,
+      nomeDestinatario: dps?.toma.xNome ?? undefined,
+    };
+  }
   return {};
 }
 
@@ -205,7 +217,8 @@ function getRecentFiles(): RecentFileEntry[] {
             documentType:
               entry.documentType === "nfe" ||
               entry.documentType === "cte" ||
-              entry.documentType === "nfse"
+              entry.documentType === "nfse" ||
+              entry.documentType === "nfse-sped"
                 ? entry.documentType
                 : undefined,
             chave: typeof entry.chave === "string" ? entry.chave : undefined,

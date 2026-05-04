@@ -1,7 +1,7 @@
 import type { ParsedDocument, DocumentType } from "@/types/common";
 import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
 import type { Cte, InfCte, IdeCte, EmitCte, PartyCte, VPrest, ImpCte, IcmsCte, InfCTeNorm, InfCarga, InfDoc, InfModal, ComplCte, ProtCTe } from "@/types/cte";
-import type { CompNfse, InfNfse, ValoresNfse, PrestadorServico, TomadorServico, EnderecoNfse, Contato, OrgaoGerador, DeclaracaoPrestacaoServico, Servico, ValoresServico } from "@/types/nfse";
+import type { CompNfse, InfNfse, ValoresNfse, PrestadorServico, TomadorServico, EnderecoNfse, Contato, OrgaoGerador, DeclaracaoPrestacaoServico, Servico, ValoresServico, SpedCompNfse } from "@/types/nfse";
 
 function getEl(parent: Element, tagName: string): Element | null {
   return parent.getElementsByTagName(tagName)[0] || null;
@@ -30,7 +30,13 @@ export function detectDocumentType(xml: string): DocumentType {
   if (lowerXml.includes("nfeproc") || lowerXml.includes("<nfe") || lowerXml.includes("infnfe") || lowerXml.includes("portalfiscal.inf.br/nfe")) {
     return "nfe";
   }
-  if (lowerXml.includes("compnfse") || lowerXml.includes("infnfse") || lowerXml.includes("<nfse") || lowerXml.includes("abrasf")) {
+  if (lowerXml.includes("compnfse") || lowerXml.includes("abrasf")) {
+    return "nfse";
+  }
+  if (lowerXml.includes("sped.fazenda.gov.br/nfse")) {
+    return "nfse-sped";
+  }
+  if (lowerXml.includes("infnfse") || lowerXml.includes("<nfse")) {
     return "nfse";
   }
   throw new Error("Tipo de documento XML não reconhecido. Suportados: NF-e, CT-e, NFS-e.");
@@ -53,6 +59,8 @@ export function parseXml(xmlString: string): ParsedDocument {
       return { documentType: "cte", cte: parseCte(xmlDoc) };
     case "nfse":
       return { documentType: "nfse", nfse: parseNfse(xmlDoc) };
+    case "nfse-sped":
+      return { documentType: "nfse-sped", spedNfse: parseSpedNfse(xmlDoc) };
   }
 }
 
@@ -811,6 +819,188 @@ function parseServico(el: Element): Servico {
     codigoTributacaoMunicipio: getTxt(el, "CodigoTributacaoMunicipio") || undefined,
     discriminacao: getTxt(el, "Discriminacao"),
     codigoMunicipio: getTxt(el, "CodigoMunicipio"),
+  };
+}
+
+// ============================================================
+// NFS-e Padrão Nacional (SPED) Parser
+// ============================================================
+
+function parseSpedNfse(doc: Document): SpedCompNfse {
+  const root = doc.documentElement;
+  const infNFSeEl = getEl(root, "infNFSe");
+  if (!infNFSeEl) {
+    throw new Error("Elemento infNFSe não encontrado no XML NFS-e (Padrão Nacional).");
+  }
+
+  return {
+    infNFSe: parseSpedInfNfse(infNFSeEl),
+  };
+}
+
+function parseSpedInfNfse(el: Element) {
+  const emitEl = getEl(el, "emit")!;
+  const valoresEl = getEl(el, "valores")!;
+  const dpsEl = getEl(el, "DPS");
+
+  let dps: import("@/types/nfse").SpedDps | undefined;
+  if (dpsEl) {
+    dps = { infDPS: parseSpedInfDps(getEl(dpsEl, "infDPS")!) };
+  }
+
+  return {
+    id: el.getAttribute("Id") || "",
+    versao: el.parentElement?.getAttribute("versao") || "",
+    nNFSe: getTxt(el, "nNFSe"),
+    xLocEmi: getTxt(el, "xLocEmi") || "",
+    xLocPrestacao: getTxt(el, "xLocPrestacao") || "",
+    cLocIncid: getTxt(el, "cLocIncid") || "",
+    xLocIncid: getTxt(el, "xLocIncid") || "",
+    xTribNac: getTxt(el, "xTribNac") || "",
+    verAplic: getTxt(el, "verAplic") || "",
+    ambGer: getTxt(el, "ambGer") || "",
+    tpEmis: getTxt(el, "tpEmis") || "",
+    procEmi: getTxt(el, "procEmi") || "",
+    cStat: getTxt(el, "cStat") || "",
+    dhProc: getTxt(el, "dhProc") || "",
+    nDFSe: getTxt(el, "nDFSe") || "",
+    emit: parseSpedEmit(emitEl),
+    valores: {
+      vLiq: getTxt(valoresEl, "vLiq"),
+    },
+    dps,
+  };
+}
+
+function parseSpedEmit(el: Element) {
+  const enderEl = getEl(el, "enderNac")!;
+  return {
+    CNPJ: getTxt(el, "CNPJ"),
+    xNome: getTxt(el, "xNome"),
+    enderNac: {
+      xLgr: getTxt(enderEl, "xLgr"),
+      nro: getTxt(enderEl, "nro"),
+      xCpl: getTxt(enderEl, "xCpl") || undefined,
+      xBairro: getTxt(enderEl, "xBairro"),
+      cMun: getTxt(enderEl, "cMun"),
+      UF: getTxt(enderEl, "UF"),
+      CEP: getTxt(enderEl, "CEP"),
+    },
+    fone: getTxt(el, "fone") || undefined,
+    email: getTxt(el, "email") || undefined,
+  };
+}
+
+function parseSpedInfDps(el: Element) {
+  const prestEl = getEl(el, "prest")!;
+  const tomaEl = getEl(el, "toma")!;
+  const servEl = getEl(el, "serv")!;
+  const valoresDpsEl = getEl(el, "valores")!;
+
+  return {
+    id: el.getAttribute("Id") || "",
+    tpAmb: getTxt(el, "tpAmb"),
+    dhEmi: getTxt(el, "dhEmi"),
+    verAplic: getTxt(el, "verAplic"),
+    serie: getTxt(el, "serie"),
+    nDPS: getTxt(el, "nDPS"),
+    dCompet: getTxt(el, "dCompet"),
+    tpEmit: getTxt(el, "tpEmit"),
+    cLocEmi: getTxt(el, "cLocEmi"),
+    prest: parseSpedPrestador(prestEl),
+    toma: parseSpedTomador(tomaEl),
+    serv: parseSpedServico(servEl),
+    valores: parseSpedValoresDps(valoresDpsEl),
+  };
+}
+
+function parseSpedPrestador(el: Element) {
+  const regTribEl = getEl(el, "regTrib");
+  return {
+    CNPJ: getTxt(el, "CNPJ"),
+    xNome: getTxt(el, "xNome") || undefined,
+    fone: getTxt(el, "fone") || undefined,
+    email: getTxt(el, "email") || undefined,
+    regTrib: regTribEl ? {
+      opSimpNac: getTxt(regTribEl, "opSimpNac"),
+      regApTribSN: getTxt(regTribEl, "regApTribSN"),
+      regEspTrib: getTxt(regTribEl, "regEspTrib"),
+    } : undefined,
+  };
+}
+
+function parseSpedTomador(el: Element) {
+  const endEl = getEl(el, "end");
+  let tomadorEnd;
+
+  if (endEl) {
+    const endNacEl = getEl(endEl, "endNac");
+    tomadorEnd = {
+      endNac: {
+        cMun: getTxt(endNacEl!, "cMun") || "",
+        CEP: getTxt(endNacEl!, "CEP") || "",
+      },
+      xLgr: getTxt(endEl, "xLgr"),
+      nro: getTxt(endEl, "nro"),
+      xCpl: getTxt(endEl, "xCpl") || undefined,
+      xBairro: getTxt(endEl, "xBairro"),
+    };
+  }
+
+  return {
+    CNPJ: getTxt(el, "CNPJ") || undefined,
+    CPF: getTxt(el, "CPF") || undefined,
+    xNome: getTxt(el, "xNome"),
+    end: tomadorEnd,
+    email: getTxt(el, "email") || undefined,
+  };
+}
+
+function parseSpedServico(el: Element) {
+  const locPrestEl = getEl(el, "locPrest")!;
+  const cServEl = getEl(el, "cServ")!;
+  return {
+    locPrest: {
+      cLocPrestacao: getTxt(locPrestEl, "cLocPrestacao"),
+    },
+    cServ: {
+      cTribNac: getTxt(cServEl, "cTribNac"),
+      xDescServ: getTxt(cServEl, "xDescServ"),
+    },
+  };
+}
+
+function parseSpedValoresDps(el: Element) {
+  const vServPrestEl = getEl(el, "vServPrest")!;
+  const tribEl = getEl(el, "trib");
+
+  let trib;
+  if (tribEl) {
+    const tribMunEl = getEl(tribEl, "tribMun");
+    const tribFedEl = getEl(tribEl, "tribFed");
+    const totTribEl = getEl(tribEl, "totTrib");
+
+    trib = {
+      tribMun: {
+        tribISSQN: getTxt(tribMunEl!, "tribISSQN"),
+        tpRetISSQN: getTxt(tribMunEl!, "tpRetISSQN"),
+      },
+      tribFed: tribFedEl ? {
+        piscofins: {
+          CST: getTxt(getEl(tribFedEl, "piscofins")!, "CST"),
+        },
+      } : undefined,
+      totTrib: totTribEl ? {
+        pTotTribSN: getTxt(totTribEl, "pTotTribSN"),
+      } : undefined,
+    };
+  }
+
+  return {
+    vServPrest: {
+      vServ: getTxt(vServPrestEl, "vServ"),
+    },
+    trib,
   };
 }
 

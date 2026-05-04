@@ -1,4 +1,4 @@
-export type DocumentType = "nfe" | "cte" | "nfse";
+export type DocumentType = "nfe" | "cte" | "nfse" | "nfse-sped";
 
 export interface RecentFileEntry {
   id: string;
@@ -55,6 +55,7 @@ export interface ParsedDocument {
   nfe?: import("./nfe").Nfe;
   cte?: import("./cte").Cte;
   nfse?: import("./nfse").CompNfse;
+  spedNfse?: import("./nfse").SpedCompNfse;
 }
 
 export interface BatchProgress {

@@ -112,3 +112,155 @@ export interface ValoresServico {
   descontoIncondicionado?: string;
   descontoCondicionado?: string;
 }
+
+// ============================================================
+// NFS-e Padrão Nacional (SPED)
+// ============================================================
+
+export interface SpedCompNfse {
+  infNFSe: SpedInfNfse;
+}
+
+export interface SpedInfNfse {
+  id: string;
+  versao: string;
+  nNFSe: string;
+  xLocEmi: string;
+  xLocPrestacao: string;
+  cLocIncid: string;
+  xLocIncid: string;
+  xTribNac: string;
+  verAplic: string;
+  ambGer: string;
+  tpEmis: string;
+  procEmi: string;
+  cStat: string;
+  dhProc: string;
+  nDFSe: string;
+  emit: SpedEmit;
+  valores: SpedValoresNfse;
+  dps?: SpedDps;
+}
+
+export interface SpedEmit {
+  CNPJ: string;
+  xNome: string;
+  enderNac: SpedEndereco;
+  fone?: string;
+  email?: string;
+}
+
+export interface SpedEndereco {
+  xLgr: string;
+  nro: string;
+  xCpl?: string;
+  xBairro: string;
+  cMun: string;
+  UF: string;
+  CEP: string;
+}
+
+export interface SpedValoresNfse {
+  vLiq: string;
+}
+
+export interface SpedDps {
+  infDPS: SpedInfDps;
+}
+
+export interface SpedInfDps {
+  id: string;
+  tpAmb: string;
+  dhEmi: string;
+  verAplic: string;
+  serie: string;
+  nDPS: string;
+  dCompet: string;
+  tpEmit: string;
+  cLocEmi: string;
+  prest: SpedPrestador;
+  toma: SpedTomador;
+  serv: SpedServico;
+  valores: SpedValoresDps;
+}
+
+export interface SpedPrestador {
+  CNPJ: string;
+  xNome?: string;
+  fone?: string;
+  email?: string;
+  regTrib?: SpedRegTrib;
+}
+
+export interface SpedRegTrib {
+  opSimpNac: string;
+  regApTribSN: string;
+  regEspTrib: string;
+}
+
+export interface SpedTomador {
+  CNPJ?: string;
+  CPF?: string;
+  xNome: string;
+  end?: SpedTomadorEnd;
+  email?: string;
+}
+
+export interface SpedTomadorEnd {
+  endNac: SpedEnderecoNac;
+  xLgr: string;
+  nro: string;
+  xCpl?: string;
+  xBairro: string;
+}
+
+export interface SpedEnderecoNac {
+  cMun: string;
+  CEP: string;
+}
+
+export interface SpedServico {
+  locPrest: SpedLocPrest;
+  cServ: SpedCServ;
+}
+
+export interface SpedLocPrest {
+  cLocPrestacao: string;
+}
+
+export interface SpedCServ {
+  cTribNac: string;
+  xDescServ: string;
+}
+
+export interface SpedValoresDps {
+  vServPrest: SpedVServPrest;
+  trib?: SpedTributos;
+}
+
+export interface SpedVServPrest {
+  vServ: string;
+}
+
+export interface SpedTributos {
+  tribMun: SpedTribMun;
+  tribFed?: SpedTribFed;
+  totTrib?: SpedTotTrib;
+}
+
+export interface SpedTribMun {
+  tribISSQN: string;
+  tpRetISSQN: string;
+}
+
+export interface SpedTribFed {
+  piscofins: SpedPisCofins;
+}
+
+export interface SpedPisCofins {
+  CST: string;
+}
+
+export interface SpedTotTrib {
+  pTotTribSN: string;
+}

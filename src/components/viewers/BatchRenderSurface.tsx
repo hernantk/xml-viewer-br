@@ -2,6 +2,7 @@ import type { ParsedDocument } from "@/types/common";
 import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
+import { SpedNFSeViewer } from "./SpedNFSeViewer";
 
 interface BatchRenderSurfaceProps {
   document: ParsedDocument | null;
@@ -29,6 +30,8 @@ export function BatchRenderSurface({ document }: BatchRenderSurfaceProps) {
           <DACTeViewer cte={document.cte} />
         ) : document.documentType === "nfse" && document.nfse ? (
           <NFSeViewer nfse={document.nfse} />
+        ) : document.documentType === "nfse-sped" && document.spedNfse ? (
+          <SpedNFSeViewer nfse={document.spedNfse} />
         ) : null}
       </div>
     </div>

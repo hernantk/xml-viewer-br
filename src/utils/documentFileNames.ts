@@ -23,6 +23,11 @@ export function getPdfBaseName(document: ParsedDocument): string {
     return sanitizeFileName(`NFSe_${numero}`);
   }
 
+  if (document.documentType === "nfse-sped" && document.spedNfse) {
+    const { nNFSe } = document.spedNfse.infNFSe;
+    return sanitizeFileName(`NFSe_${nNFSe}`);
+  }
+
   return "documento";
 }
 
