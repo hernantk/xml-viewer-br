@@ -36,6 +36,7 @@ tauri-plugin-process = "2"
 windows-sys = { version = "0.61.2", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 webview2-com = "0.38"
 windows-core = "0.61"
+url = "2"
 
 [target.'cfg(not(windows))'.dependencies]
 open = "5"

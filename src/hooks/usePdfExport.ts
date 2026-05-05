@@ -156,6 +156,7 @@ export function usePdfExport() {
               return `${await appLocalDataDir()}${sep}_temp_print_${defaultName}.pdf`;
             })());
 
+        // 1. Generate PDF (try native PrintToPdf first, fallback html2canvas)
         try {
           await invoke("print_to_pdf", { outputPath: tmpPath });
         } catch {
@@ -167,10 +168,16 @@ export function usePdfExport() {
           await writeFile(tmpPath, pdfBytes);
         }
 
+        // 2. Open native system print dialog (in-app WebView2)
         try {
-          await invoke("print_file", { path: tmpPath });
+          await invoke("print_pdf_file", { path: tmpPath });
         } catch {
-          alert(`PDF gerado em: ${tmpPath}. Abra o arquivo manualmente para imprimir.`);
+          // 3. Fallback: ShellExecuteW with "print" verb
+          try {
+            await invoke("print_file", { path: tmpPath });
+          } catch {
+            alert(`PDF gerado em: ${tmpPath}. Abra o arquivo manualmente para imprimir.`);
+          }
         }
       } else {
         const viewerEl = document.getElementById("document-viewer-content");

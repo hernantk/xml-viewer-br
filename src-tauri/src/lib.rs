@@ -109,6 +109,7 @@ pub fn run() {
             commands::parse::read_file,
             commands::parse::take_pending_open_paths,
             commands::pdf::print_to_pdf,
+            commands::pdf::print_pdf_file,
             commands::print::print_file,
         ])
         .run(tauri::generate_context!())

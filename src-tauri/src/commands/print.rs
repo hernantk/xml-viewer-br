@@ -30,10 +30,10 @@ pub async fn print_file(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{SW_HIDE, SW_SHOWNORMAL};
+        use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-        // Try "print" verb first (works with Adobe Reader, Foxit, SumatraPDF)
-        let result = shell_execute("print", &path, SW_HIDE);
+        // Try "print" verb — shows the print dialog in the default PDF viewer
+        let result = shell_execute("print", &path, SW_SHOWNORMAL);
         if result > 32 {
             return Ok(());
         }
