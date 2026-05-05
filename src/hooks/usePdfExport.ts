@@ -148,13 +148,9 @@ export function usePdfExport() {
 
       if (tauriRuntime) {
         const { invoke } = await import("@tauri-apps/api/core");
-        const sep = downloadDir.includes("\\") ? "\\" : "/";
-        const tmpPath = downloadDir
-          ? `${downloadDir}${sep}_temp_print_${defaultName}.pdf`
-          : (await (async () => {
-              const { appLocalDataDir } = await import("@tauri-apps/api/path");
-              return `${await appLocalDataDir()}${sep}_temp_print_${defaultName}.pdf`;
-            })());
+        const { tempDir } = await import("@tauri-apps/api/path");
+        const sep = (await tempDir()).includes("\\") ? "\\" : "/";
+        const tmpPath = `${await tempDir()}${sep}_temp_print_${defaultName}.pdf`;
 
         // 1. Generate PDF (try native PrintToPdf first, fallback html2canvas)
         try {
