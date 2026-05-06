@@ -22,6 +22,8 @@ import {
 } from "@/utils/paginationUtils";
 import { usePaginationResize } from "@/hooks/usePaginationResize";
 
+const DANFE_ADDITIONAL_SECTION_SAFETY_PX = 48;
+
 interface Props {
   nfe: Nfe;
 }
@@ -537,7 +539,7 @@ export function DANFEViewer({ nfe }: Props) {
 
   // ---- Dados Adicionais ----
   const additionalSection = (
-    <div>
+    <div className="break-inside-avoid">
       <SectionTitle>Dados Adicionais</SectionTitle>
       <div className="grid grid-cols-2">
         <div className="rounded border border-black px-[2pt] py-[1pt]">
@@ -634,7 +636,7 @@ export function DANFEViewer({ nfe }: Props) {
     const rowHeights = det.map((_, index) => measureRowRefs.current[index]?.getBoundingClientRect().height ?? 0);
 
     const firstPageAvailable = Math.max(
-      pageContentHeight - firstPageStaticHeight - additionalHeight - productsHeadHeight,
+      pageContentHeight - firstPageStaticHeight - additionalHeight - productsHeadHeight - DANFE_ADDITIONAL_SECTION_SAFETY_PX,
       40,
     );
     const continuationPageAvailable = Math.max(
@@ -685,7 +687,7 @@ export function DANFEViewer({ nfe }: Props) {
             {receiptBlock}
             {headerBlockWithPage(1)}
             {topSections}
-            <ProductsTable items={firstPageProducts} />
+            {firstPageProducts.length > 0 && <ProductsTable items={firstPageProducts} />}
             {additionalSection}
           </section>
 
@@ -700,7 +702,7 @@ export function DANFEViewer({ nfe }: Props) {
                   </span>
                   <div className="flex-1 border-t border-dashed border-gray-300" />
                 </div>
-                <section className="danfe-page p-4">
+                <section className="danfe-page p-4 break-before-page">
                   {headerBlockWithPage(pageNum)}
                   <ProductsTable items={items} />
                 </section>

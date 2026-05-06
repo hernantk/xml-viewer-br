@@ -83,6 +83,16 @@
   page-break-before: always;
 }
 
+.break-before-page {
+  break-before: page;
+  page-break-before: always;
+}
+
+.break-inside-avoid {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 @media print {
   @page {
     size: A4 portrait;
@@ -162,5 +172,15 @@
   .danfe-page + .danfe-page {
     break-before: page;
     page-break-before: always;
+  }
+
+  .break-before-page {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
