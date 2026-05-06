@@ -3,7 +3,7 @@ import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
 import { SpedNFSeViewer } from "./SpedNFSeViewer";
-import { AlertTriangle, Copy, Check, Download, Loader2 } from "lucide-react";
+import { AlertTriangle, Copy, Check, Download, Loader2, FileCode } from "lucide-react";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import { useState } from "react";
 
@@ -18,9 +18,22 @@ export function DocumentViewer() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 size={32} className="animate-spin text-blue-500" />
-        <span className="ml-3 text-gray-500">Carregando documento...</span>
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <div className="relative">
+          <Loader2 size={40} className="animate-spin text-blue-500" />
+          <FileCode
+            size={16}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-400"
+          />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            Carregando documento...
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            Lendo e interpretando arquivo XML
+          </p>
+        </div>
       </div>
     );
   }

@@ -17,6 +17,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
   const loadFile = useDocumentStore((s) => s.loadFile);
   const loadMultipleFiles = useDocumentStore((s) => s.loadMultipleFiles);
   const loadPaths = useDocumentStore((s) => s.loadPaths);
+  const setLoading = useDocumentStore((s) => s.setLoading);
   const setError = useDocumentStore((s) => s.setError);
   const dragDepthRef = useRef(0);
   const [importNotice, setImportNotice] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
         return;
       }
 
+      setLoading(true);
       try {
         if (xmlFiles.length === 1) {
           const text = await xmlFiles[0].text();
@@ -97,6 +99,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
           setTimeout(() => setImportNotice(null), 4000);
         }
       } catch (error) {
+        setLoading(false);
         setError(
           error instanceof Error
             ? error.message
@@ -104,7 +107,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
         );
       }
     },
-    [isXmlFile, loadFile, loadMultipleFiles, setError],
+    [isXmlFile, loadFile, loadMultipleFiles, setLoading, setError],
   );
 
   const handleDragEnter = useCallback((e: DragEvent) => {

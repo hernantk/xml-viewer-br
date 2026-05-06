@@ -309,6 +309,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
+    await new Promise((r) => setTimeout(r, 0));
 
     try {
       let content = xmlContent;
@@ -466,6 +467,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (files.length === 0) return { loaded: 0, skipped: 0, limitIncreased: false, newLimit: get().maxRecentFiles };
 
     set({ loading: true, error: null });
+    await new Promise((r) => setTimeout(r, 0));
 
     let limitIncreased = false;
     let currentMax = get().maxRecentFiles;
@@ -537,10 +539,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   loadPaths: async (paths) => {
+    set({ loading: true, error: null });
+
     const uniqueXmlPaths = [...new Set(paths)]
       .filter((path) => path.toLowerCase().endsWith(".xml"));
 
     if (uniqueXmlPaths.length === 0) {
+      set({ loading: false, error: "Nenhum arquivo XML válido foi encontrado." });
       return { loaded: 0, skipped: 0, limitIncreased: false, newLimit: get().maxRecentFiles };
     }
 
@@ -560,7 +565,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const message = skipped > 0
         ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
         : "Nenhum arquivo XML valido foi encontrado.";
-      set({ error: message });
+      set({ loading: false, error: message });
       return { loaded: 0, skipped, limitIncreased: false, newLimit: get().maxRecentFiles };
     }
 
