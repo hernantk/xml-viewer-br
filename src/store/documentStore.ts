@@ -31,6 +31,7 @@ interface DocumentState {
   setDownloadDir: (dir: string) => void;
   initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
+  getRecentFileContent: (fileId: string) => Promise<string>;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
 }
@@ -461,6 +462,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     } else {
       set({ recentFiles: updated });
     }
+  },
+
+  getRecentFileContent: async (fileId: string) => {
+    const cachedContent = getRecentFileCache()[fileId];
+    if (cachedContent) {
+      return cachedContent;
+    }
+
+    if (!canReopenRecentFile(fileId)) {
+      throw new Error("Esse arquivo recente nao esta disponivel neste ambiente.");
+    }
+
+    return readFilesystemFile(fileId);
   },
 
   loadMultipleFiles: async (files) => {

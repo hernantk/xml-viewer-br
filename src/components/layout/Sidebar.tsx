@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Clock, FileDown, Printer, Search, Trash2 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
-import { usePdfExport } from "@/hooks/usePdfExport";
+import { useRecentFilePdfExport } from "@/hooks/useRecentFilePdfExport";
+import { BatchRenderSurface } from "@/components/viewers/BatchRenderSurface";
 import appLogo from "@/assets/branding/app-logo.svg";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import type { DocumentType } from "@/types/common";
@@ -33,7 +34,15 @@ export function Sidebar() {
   const loadFile = useDocumentStore((s) => s.loadFile);
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
   const currentFilePath = useDocumentStore((s) => s.currentFilePath);
-  const { exportPdf, exporting, printPdf, printing, exportNotice } = usePdfExport();
+  const {
+    exportRecentPdf,
+    exporting,
+    printRecentPdf,
+    printing,
+    exportNotice,
+    renderDocument,
+    renderSurfaceId,
+  } = useRecentFilePdfExport();
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -56,27 +65,15 @@ export function Sidebar() {
     if (!contextMenu) return;
     const fileId = contextMenu.fileId;
     closeMenu();
-    // Load the file first so it renders, then export
-    await loadFile(fileId);
-    // Small delay for the viewer to render
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        exportPdf();
-      }, 300);
-    });
-  }, [contextMenu, closeMenu, loadFile, exportPdf]);
+    await exportRecentPdf(fileId);
+  }, [contextMenu, closeMenu, exportRecentPdf]);
 
   const handlePrint = useCallback(async () => {
     if (!contextMenu) return;
     const fileId = contextMenu.fileId;
     closeMenu();
-    await loadFile(fileId);
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        printPdf();
-      }, 300);
-    });
-  }, [contextMenu, closeMenu, loadFile, printPdf]);
+    await printRecentPdf(fileId);
+  }, [contextMenu, closeMenu, printRecentPdf]);
 
   const handleDelete = useCallback(() => {
     if (!contextMenu) return;
@@ -335,6 +332,7 @@ export function Sidebar() {
           {exportNotice}
         </div>
       )}
+      <BatchRenderSurface document={renderDocument} contentId={renderSurfaceId} />
     </aside>
   );
 }

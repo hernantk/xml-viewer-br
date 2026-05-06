@@ -2,6 +2,7 @@
 ///
 /// Uses `ICoreWebView2_7::PrintToPdf` on Windows to produce a vector PDF
 /// that honours the existing `@media print` CSS (page breaks, hidden UI, etc.).
+use tauri::Manager;
 
 #[tauri::command]
 pub async fn print_to_pdf(
@@ -41,6 +42,30 @@ pub async fn print_pdf_file(
         let _ = (app_handle, path);
         Err("Impressão de PDF disponível apenas no Windows".into())
     }
+}
+
+#[tauri::command]
+pub async fn create_pdf_render_window(
+    app_handle: tauri::AppHandle,
+    label: String,
+    url: String,
+) -> Result<(), String> {
+    let _ = app_handle.get_webview_window(&label).map(|window| window.close());
+
+    tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        &label,
+        tauri::WebviewUrl::App(url.into()),
+    )
+    .title("Gerando PDF - XML Viewer BR")
+    .inner_size(900.0, 1200.0)
+    .resizable(false)
+    .decorations(false)
+    .visible(false)
+    .build()
+    .map_err(|e| format!("Erro ao criar janela de renderizacao de PDF: {e}"))?;
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

@@ -6,9 +6,10 @@ import { SpedNFSeViewer } from "./SpedNFSeViewer";
 
 interface BatchRenderSurfaceProps {
   document: ParsedDocument | null;
+  contentId?: string;
 }
 
-export function BatchRenderSurface({ document }: BatchRenderSurfaceProps) {
+export function BatchRenderSurface({ document, contentId = "batch-document-viewer-content" }: BatchRenderSurfaceProps) {
   if (!document) {
     return (
       <div
@@ -23,7 +24,7 @@ export function BatchRenderSurface({ document }: BatchRenderSurfaceProps) {
       aria-hidden="true"
       className="pointer-events-none fixed -left-[200vw] top-0 w-[794px] overflow-hidden opacity-0"
     >
-      <div id="batch-document-viewer-content">
+      <div id={contentId}>
         {document.documentType === "nfe" && document.nfe ? (
           <DANFEViewer nfe={document.nfe} />
         ) : document.documentType === "cte" && document.cte ? (
