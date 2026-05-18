@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   FolderOpen,
+  CloudDownload,
   FileDown,
   Printer,
   Files,
@@ -18,6 +19,7 @@ import { useFileOpen } from "@/hooks/useFileOpen";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { SettingsModal } from "@/components/common/SettingsModal";
 import { BatchPdfModal } from "@/components/common/BatchPdfModal";
+import { XmlDownloadModal } from "@/components/common/XmlDownloadModal";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
 import { isTauriRuntime } from "@/utils/runtime";
 import type { UpdaterStatus } from "@/hooks/useUpdater";
@@ -40,6 +42,7 @@ export function Header({
   onShowUpdate,
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [xmlDownloadOpen, setXmlDownloadOpen] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
@@ -85,6 +88,17 @@ export function Header({
         <FolderOpen size={16} />
         Abrir
       </button>
+
+      {showBatchButton && (
+        <button
+          onClick={() => setXmlDownloadOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          title="Baixar XML de NF-e"
+        >
+          <CloudDownload size={16} />
+          Baixar XML
+        </button>
+      )}
 
       {showBatchButton && (
         <button
@@ -186,6 +200,7 @@ export function Header({
       </button>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <XmlDownloadModal open={xmlDownloadOpen} onClose={() => setXmlDownloadOpen(false)} />
       <BatchPdfModal
         open={batchPdf.isOpen}
         isRunning={batchPdf.isRunning}
