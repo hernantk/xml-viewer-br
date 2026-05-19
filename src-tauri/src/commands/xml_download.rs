@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::process::Command;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 const NFE_DOWNLOAD_URL: &str = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx";
 
@@ -13,6 +13,11 @@ pub struct UserCertificate {
     pub not_before: String,
     pub not_after: String,
     pub has_private_key: bool,
+}
+
+#[derive(Clone, Serialize)]
+struct NfeXmlDownloadedPayload {
+    path: String,
 }
 
 #[tauri::command]
@@ -61,11 +66,11 @@ pub async fn open_nfe_download_window(
     .inner_size(1120.0, 820.0)
     .min_inner_size(900.0, 650.0)
     .resizable(true)
-    .incognito(true)
     .center()
     .build()
     .map_err(|e| format!("Erro ao abrir janela de consulta NF-e: {e}"))?;
 
+    install_nfe_download_handler(&window, app_handle.clone(), &normalized_key)?;
     install_client_certificate_selector(&window, certificate_thumbprint)?;
     install_nfe_key_autofill(&window, normalized_key)?;
 
@@ -79,6 +84,190 @@ pub fn close_nfe_download_window(app_handle: tauri::AppHandle) -> Result<(), Str
             .close()
             .map_err(|e| format!("Erro ao fechar janela de consulta NF-e: {e}"))?;
     }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn install_nfe_download_handler(
+    _window: &tauri::WebviewWindow,
+    _app_handle: tauri::AppHandle,
+    _access_key: &str,
+) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn install_nfe_download_handler(
+    window: &tauri::WebviewWindow,
+    app_handle: tauri::AppHandle,
+    access_key: &str,
+) -> Result<(), String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use std::path::PathBuf;
+
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2,
+        ICoreWebView2DownloadStartingEventArgs,
+        ICoreWebView2DownloadStartingEventHandler,
+        ICoreWebView2DownloadStartingEventHandler_Impl,
+        ICoreWebView2_4,
+    };
+    use windows_core::{Interface, PCWSTR};
+
+    fn to_wide(value: &OsStr) -> Vec<u16> {
+        value.encode_wide().chain(Some(0)).collect()
+    }
+
+    #[windows_core::implement(ICoreWebView2DownloadStartingEventHandler)]
+    struct NfeDownloadStartingHandler {
+        app_handle: tauri::AppHandle,
+        output_path: PathBuf,
+    }
+
+    impl ICoreWebView2DownloadStartingEventHandler_Impl for NfeDownloadStartingHandler_Impl {
+        fn Invoke(
+            &self,
+            _sender: windows_core::Ref<'_, ICoreWebView2>,
+            args: windows_core::Ref<'_, ICoreWebView2DownloadStartingEventArgs>,
+        ) -> windows_core::Result<()> {
+            if let Some(args) = &*args {
+                let result = (|| -> Result<(), String> {
+                    // Get a deferral to prevent WebView2 from proceeding with
+                    // the download before we configure it.
+                    let deferral = unsafe {
+                        args.GetDeferral()
+                            .map_err(|e| format!("GetDeferral: {e}"))?
+                    };
+
+                    eprintln!("[NF-e Download] DownloadStarting disparado");
+
+                    // Set the output path so the file goes to our controlled location
+                    let wide_path = to_wide(self.output_path.as_os_str());
+                    unsafe {
+                        args.SetResultFilePath(PCWSTR(wide_path.as_ptr()))
+                            .map_err(|e| format!("SetResultFilePath: {e}"))?;
+                        args.SetHandled(true)
+                            .map_err(|e| format!("SetHandled: {e}"))?;
+                    }
+                    eprintln!("[NF-e Download] Salvando em: {:?}", self.output_path);
+
+                    // Complete the deferral to let the download proceed
+                    unsafe {
+                        deferral
+                            .Complete()
+                            .map_err(|e| format!("Deferral.Complete: {e}"))?;
+                    }
+
+                    // Spawn a file watcher thread since WebView2 StateChanged
+                    // events are unreliable for detecting download completion.
+                    let path = self.output_path.clone();
+                    let app_handle = self.app_handle.clone();
+                    std::thread::spawn(move || {
+                        watch_download_file(path, app_handle);
+                    });
+
+                    Ok(())
+                })();
+
+                if let Err(e) = result {
+                    eprintln!("[NF-e Download] Erro ao iniciar: {e}");
+                }
+            }
+            Ok(())
+        }
+    }
+
+    /// Poll the output file until it exists and is stable (download complete).
+    fn watch_download_file(path: PathBuf, app_handle: tauri::AppHandle) {
+        use std::thread::sleep;
+        use std::time::Duration;
+
+        let poll_interval = Duration::from_millis(300);
+        let max_attempts = 200; // 60 seconds max
+        let mut last_size: u64 = 0;
+        let mut stable_count: u32 = 0;
+
+        for _ in 0..max_attempts {
+            sleep(poll_interval);
+
+            let size = match std::fs::metadata(&path) {
+                Ok(meta) => meta.len(),
+                Err(_) => {
+                    last_size = 0;
+                    stable_count = 0;
+                    continue;
+                }
+            };
+
+            if size == 0 {
+                last_size = 0;
+                stable_count = 0;
+                continue;
+            }
+
+            if size == last_size {
+                stable_count += 1;
+            } else {
+                stable_count = 0;
+                last_size = size;
+            }
+
+            // File is stable for 2 consecutive checks (~600ms)
+            if stable_count >= 2 {
+                let path_str = path.to_string_lossy().to_string();
+                eprintln!("[NF-e Download] Concluído (file watcher): {path_str}");
+                let _ = app_handle.emit(
+                    "app://nfe-xml-downloaded",
+                    NfeXmlDownloadedPayload { path: path_str },
+                );
+                // Close the download browser window
+                if let Some(window) = app_handle.get_webview_window("nfe-download") {
+                    let _ = window.close();
+                }
+                return;
+            }
+        }
+
+        eprintln!("[NF-e Download] Timeout esperando download: {:?}", path);
+    }
+
+    let output_dir = std::env::temp_dir().join("xml-viewer-br").join("nfe-downloads");
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| format!("Erro ao criar pasta temporária de downloads NF-e: {e}"))?;
+    let output_path = output_dir.join(format!("nfe-{}.xml", access_key));
+    let _ = std::fs::remove_file(&output_path);
+
+    window
+        .with_webview(move |webview| {
+            let result = (|| -> Result<(), String> {
+                unsafe {
+                    let core = webview
+                        .controller()
+                        .CoreWebView2()
+                        .map_err(|e| format!("CoreWebView2: {e}"))?;
+                    let core4: ICoreWebView2_4 = core
+                        .cast()
+                        .map_err(|e| format!("ICoreWebView2_4: {e}"))?;
+                    let handler: ICoreWebView2DownloadStartingEventHandler =
+                        NfeDownloadStartingHandler {
+                            app_handle,
+                            output_path,
+                        }
+                        .into();
+                    let mut token = 0;
+                    core4
+                        .add_DownloadStarting(&handler, &mut token)
+                        .map_err(|e| format!("add_DownloadStarting: {e}"))?;
+                }
+                Ok(())
+            })();
+            if let Err(e) = result {
+                eprintln!("Erro ao configurar captura de download NF-e: {e}");
+            }
+        })
+        .map_err(|e| format!("Erro ao acessar WebView: {e}"))?;
 
     Ok(())
 }
@@ -242,7 +431,8 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
     use std::os::windows::ffi::OsStrExt;
 
     use webview2_com::Microsoft::Web::WebView2::Win32::{
-        ICoreWebView2, ICoreWebView2ExecuteScriptCompletedHandler,
+        ICoreWebView2, ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler,
+        ICoreWebView2ExecuteScriptCompletedHandler,
         ICoreWebView2NavigationCompletedEventArgs,
         ICoreWebView2NavigationCompletedEventHandler,
         ICoreWebView2NavigationCompletedEventHandler_Impl,
@@ -262,6 +452,51 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
             r#"
 (function() {{
   var key = {key};
+  function xmlViewerText(element) {{
+    return ((element.innerText || '') + ' ' + (element.textContent || '') + ' ' + (element.value || '') + ' ' + (element.title || '') + ' ' + (element.name || '') + ' ' + (element.id || '') + ' ' + (element.getAttribute('aria-label') || '')).replace(/\s+/g, ' ').toLowerCase();
+  }}
+
+  function xmlViewerClick(element) {{
+    try {{ element.scrollIntoView({{ block: 'center', inline: 'center' }}); }} catch (_) {{}}
+    try {{ element.focus(); }} catch (_) {{}}
+    ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click'].forEach(function(type) {{
+      try {{
+        element.dispatchEvent(new MouseEvent(type, {{ bubbles: true, cancelable: true, view: window }}));
+      }} catch (_) {{}}
+    }});
+    try {{ element.click(); }} catch (_) {{}}
+  }}
+
+  function xmlViewerFindDownloadButton() {{
+    var controls = Array.prototype.slice.call(document.querySelectorAll('a, button, input, span'));
+    return controls.find(function(control) {{
+      var text = xmlViewerText(control);
+      if (text.indexOf('download') === -1) return false;
+      return text.indexOf('documento') !== -1 || text.indexOf('xml') !== -1;
+    }});
+  }}
+
+  function xmlViewerTryDownloadClick() {{
+    if (window.__xmlViewerNfeDownloadClicked) return;
+    var download = xmlViewerFindDownloadButton();
+    if (download) {{
+      window.__xmlViewerNfeDownloadClicked = true;
+      xmlViewerClick(download);
+    }}
+  }}
+
+  if (!window.__xmlViewerNfeDownloadWatcher) {{
+    window.__xmlViewerNfeDownloadWatcher = setInterval(function() {{
+      if (window.__xmlViewerNfeDownloadClicked) return;
+      xmlViewerTryDownloadClick();
+    }}, 800);
+    try {{
+      new MutationObserver(xmlViewerTryDownloadClick).observe(document.documentElement, {{ childList: true, subtree: true }});
+    }} catch (_) {{}}
+  }}
+
+  xmlViewerTryDownloadClick();
+
   var attempts = 0;
   var timer = setInterval(function() {{
     attempts += 1;
@@ -358,6 +593,13 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
                         .controller()
                         .CoreWebView2()
                         .map_err(|e| format!("CoreWebView2: {e}"))?;
+                    let created_script = to_wide(&script);
+                    core
+                        .AddScriptToExecuteOnDocumentCreated(
+                            PCWSTR(created_script.as_ptr()),
+                            Option::<&ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler>::None,
+                        )
+                        .map_err(|e| format!("AddScriptToExecuteOnDocumentCreated: {e}"))?;
                     let core4: ICoreWebView2_4 = core
                         .cast()
                         .map_err(|e| format!("ICoreWebView2_4: {e}"))?;

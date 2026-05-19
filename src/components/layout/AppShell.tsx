@@ -16,7 +16,7 @@ export function AppShell() {
   const error = useDocumentStore((s) => s.error);
   const initializeDownloadDir = useDocumentStore((s) => s.initializeDownloadDir);
 
-  useAssociatedFileOpen();
+  const { nfeDownloadNotice } = useAssociatedFileOpen();
   const updater = useUpdater();
 
   useEffect(() => {
@@ -55,6 +55,11 @@ export function AppShell() {
         onRelaunch={updater.relaunch}
         onDismiss={updater.dismiss}
       />
+      {nfeDownloadNotice && (
+        <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg no-print">
+          {nfeDownloadNotice}
+        </div>
+      )}
     </FileDropZone>
   );
 }
