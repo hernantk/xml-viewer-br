@@ -36,6 +36,37 @@ pub async fn list_user_certificates() -> Result<Vec<UserCertificate>, String> {
     }
 }
 
+/// Remove leftover temp WebView2 environment directories older than 1 hour.
+fn cleanup_old_nfe_environments() {
+    let base_dir = std::env::temp_dir().join("xml-viewer-br");
+    let Ok(entries) = std::fs::read_dir(&base_dir) else { return };
+    let max_age = std::time::Duration::from_secs(3600);
+    let now = std::time::SystemTime::now();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let is_nfe_env = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with("nfe-env-"));
+        if !is_nfe_env {
+            continue;
+        }
+        let modified = match std::fs::metadata(&path).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if let Ok(age) = now.duration_since(modified) {
+            if age > max_age {
+                eprintln!("[NF-e] Removendo diretório temporário antigo: {path:?}");
+                let _ = std::fs::remove_dir_all(&path);
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn open_nfe_download_window(
     app_handle: tauri::AppHandle,
@@ -56,6 +87,21 @@ pub async fn open_nfe_download_window(
         .get_webview_window(label)
         .map(|window| window.close());
 
+    // Clean up old temp WebView2 environments from previous sessions
+    cleanup_old_nfe_environments();
+
+    // Each download window gets its own WebView2 environment (unique temp data_directory)
+    // so the client certificate cache is never shared between downloads.
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| format!("Erro ao gerar timestamp: {e}"))?
+        .as_nanos();
+    let env_dir = std::env::temp_dir()
+        .join("xml-viewer-br")
+        .join(format!("nfe-env-{timestamp}"));
+    std::fs::create_dir_all(&env_dir)
+        .map_err(|e| format!("Erro ao criar diretório temporário: {e}"))?;
+
     let window = tauri::WebviewWindowBuilder::new(
         &app_handle,
         label,
@@ -65,6 +111,7 @@ pub async fn open_nfe_download_window(
                 .map_err(|e| format!("URL de consulta NF-e inválida: {e}"))?,
         ),
     )
+    .data_directory(env_dir.clone())
     .title("Baixar XML NF-e - XML Viewer BR")
     .inner_size(1120.0, 820.0)
     .min_inner_size(900.0, 650.0)
@@ -73,7 +120,7 @@ pub async fn open_nfe_download_window(
     .build()
     .map_err(|e| format!("Erro ao abrir janela de consulta NF-e: {e}"))?;
 
-    install_nfe_download_handler(&window, app_handle.clone(), &normalized_key)?;
+    install_nfe_download_handler(&window, app_handle.clone(), &normalized_key, &env_dir)?;
     install_client_certificate_selector(&window, certificate_thumbprint)?;
     install_nfe_key_autofill(&window, normalized_key)?;
 
@@ -88,6 +135,7 @@ pub fn close_nfe_download_window(app_handle: tauri::AppHandle) -> Result<(), Str
             .map_err(|e| format!("Erro ao fechar janela de consulta NF-e: {e}"))?;
     }
 
+    cleanup_old_nfe_environments();
     Ok(())
 }
 
@@ -96,6 +144,7 @@ fn install_nfe_download_handler(
     _window: &tauri::WebviewWindow,
     _app_handle: tauri::AppHandle,
     _access_key: &str,
+    _env_dir: &std::path::Path,
 ) -> Result<(), String> {
     Ok(())
 }
@@ -105,6 +154,7 @@ fn install_nfe_download_handler(
     window: &tauri::WebviewWindow,
     app_handle: tauri::AppHandle,
     access_key: &str,
+    env_dir: &std::path::Path,
 ) -> Result<(), String> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
@@ -127,6 +177,7 @@ fn install_nfe_download_handler(
     struct NfeDownloadStartingHandler {
         app_handle: tauri::AppHandle,
         output_path: PathBuf,
+        env_dir: PathBuf,
     }
 
     impl ICoreWebView2DownloadStartingEventHandler_Impl for NfeDownloadStartingHandler_Impl {
@@ -167,8 +218,9 @@ fn install_nfe_download_handler(
                     // events are unreliable for detecting download completion.
                     let path = self.output_path.clone();
                     let app_handle = self.app_handle.clone();
+                    let env_dir = self.env_dir.clone();
                     std::thread::spawn(move || {
-                        watch_download_file(path, app_handle);
+                        watch_download_file(path, app_handle, env_dir);
                     });
 
                     Ok(())
@@ -183,7 +235,7 @@ fn install_nfe_download_handler(
     }
 
     /// Poll the output file until it exists and is stable (download complete).
-    fn watch_download_file(path: PathBuf, app_handle: tauri::AppHandle) {
+    fn watch_download_file(path: PathBuf, app_handle: tauri::AppHandle, env_dir: PathBuf) {
         use std::thread::sleep;
         use std::time::Duration;
 
@@ -229,6 +281,8 @@ fn install_nfe_download_handler(
                 if let Some(window) = app_handle.get_webview_window("nfe-download") {
                     let _ = window.close();
                 }
+                // Clean up the temp WebView2 environment directory
+                let _ = std::fs::remove_dir_all(&env_dir);
                 return;
             }
         }
@@ -236,6 +290,7 @@ fn install_nfe_download_handler(
         eprintln!("[NF-e Download] Timeout esperando download: {:?}", path);
     }
 
+    let env_dir = env_dir.to_path_buf();
     let output_dir = std::env::temp_dir().join("xml-viewer-br").join("nfe-downloads");
     std::fs::create_dir_all(&output_dir)
         .map_err(|e| format!("Erro ao criar pasta temporária de downloads NF-e: {e}"))?;
@@ -257,6 +312,7 @@ fn install_nfe_download_handler(
                         NfeDownloadStartingHandler {
                             app_handle,
                             output_path,
+                            env_dir,
                         }
                         .into();
                     let mut token = 0;
