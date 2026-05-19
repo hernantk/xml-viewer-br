@@ -2,6 +2,9 @@ use serde::Serialize;
 use std::process::Command;
 use tauri::{Emitter, Manager};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 const NFE_DOWNLOAD_URL: &str = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx";
 
 #[derive(Debug, Serialize)]
@@ -674,6 +677,7 @@ $certs | ConvertTo-Json -Compress
 "#;
 
     let output = Command::new("powershell")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
         .args([
             "-NoProfile",
             "-NonInteractive",
