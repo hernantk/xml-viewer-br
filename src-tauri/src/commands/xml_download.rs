@@ -719,7 +719,8 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
 #[cfg(target_os = "windows")]
 fn list_windows_user_certificates() -> Result<Vec<UserCertificate>, String> {
     let script = r#"
-$certs = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey -eq $true } | Sort-Object NotAfter -Descending | ForEach-Object {
+$now = Get-Date
+$certs = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object { $_.HasPrivateKey -eq $true -and $_.NotBefore -le $now -and $_.NotAfter -gt $now } | Sort-Object NotAfter -Descending | ForEach-Object {
   [PSCustomObject]@{
     thumbprint = $_.Thumbprint
     subject = $_.Subject

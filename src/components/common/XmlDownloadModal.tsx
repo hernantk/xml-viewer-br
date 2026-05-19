@@ -122,7 +122,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
             >
               {loadingCertificates && <option>Carregando certificados...</option>}
               {!loadingCertificates && certificates.length === 0 && (
-                <option>Nenhum certificado com chave privada encontrado</option>
+                <option>Nenhum certificado válido com chave privada encontrado</option>
               )}
               {certificates.map((certificate) => (
                 <option key={certificate.thumbprint} value={certificate.thumbprint}>
