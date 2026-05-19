@@ -485,6 +485,31 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
     }}
   }}
 
+  function xmlViewerFindContinueButton() {{
+    var controls = Array.prototype.slice.call(document.querySelectorAll('button, input[type="button"], input[type="submit"], a'));
+    return controls.find(function(control) {{
+      var text = xmlViewerText(control);
+      return text.indexOf('continuar') !== -1;
+    }});
+  }}
+
+  function xmlViewerCaptchaSolved() {{
+    var response = document.querySelector('textarea[name="g-recaptcha-response"], textarea[name="h-captcha-response"]');
+    return !!response && (response.value || '').trim().length > 0;
+  }}
+
+  function xmlViewerTryContinueClick() {{
+    if (window.__xmlViewerNfeContinueClicked) return;
+    var button = xmlViewerFindContinueButton();
+    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+    if (!xmlViewerCaptchaSolved()) return;
+
+    window.__xmlViewerNfeContinueClicked = true;
+    setTimeout(function() {{
+      xmlViewerClick(button);
+    }}, 250);
+  }}
+
   if (!window.__xmlViewerNfeDownloadWatcher) {{
     window.__xmlViewerNfeDownloadWatcher = setInterval(function() {{
       if (window.__xmlViewerNfeDownloadClicked) return;
@@ -495,7 +520,18 @@ fn install_nfe_key_autofill(window: &tauri::WebviewWindow, access_key: String) -
     }} catch (_) {{}}
   }}
 
+  if (!window.__xmlViewerNfeContinueWatcher) {{
+    window.__xmlViewerNfeContinueWatcher = setInterval(function() {{
+      if (window.__xmlViewerNfeContinueClicked) return;
+      xmlViewerTryContinueClick();
+    }}, 800);
+    try {{
+      new MutationObserver(xmlViewerTryContinueClick).observe(document.documentElement, {{ childList: true, subtree: true, attributes: true }});
+    }} catch (_) {{}}
+  }}
+
   xmlViewerTryDownloadClick();
+  xmlViewerTryContinueClick();
 
   var attempts = 0;
   var timer = setInterval(function() {{
