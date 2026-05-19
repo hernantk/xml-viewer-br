@@ -22,6 +22,7 @@ const PERSISTED_KEYS = [
   "xmlviewer-theme",
   "xmlviewer-max-recent",
   "xmlviewer-download-dir",
+  "xmlviewer-selected-cert",
 ] as const;
 
 type PersistedData = Partial<Record<string, string>>;

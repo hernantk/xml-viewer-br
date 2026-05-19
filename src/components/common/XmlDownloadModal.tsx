@@ -41,7 +41,11 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    setSelectedCertificate((current) => current || certificates[0]?.thumbprint || "");
+
+    const savedThumbprint = localStorage.getItem("xmlviewer-selected-cert");
+    const isValid = savedThumbprint && certificates.some((c) => c.thumbprint === savedThumbprint);
+
+    setSelectedCertificate(isValid ? savedThumbprint : (certificates[0]?.thumbprint || ""));
   }, [certificates, open]);
 
   if (!open) return null;
@@ -53,6 +57,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
 
   const handleCertificateChange = (thumbprint: string) => {
     setSelectedCertificate(thumbprint);
+    localStorage.setItem("xmlviewer-selected-cert", thumbprint);
     void closeDownloadWindow();
   };
 
