@@ -19,6 +19,7 @@ interface DocumentState {
   error: string | null;
   maxRecentFiles: number;
   downloadDir: string;
+  isEdited: boolean;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
   setDocument: (doc: ParsedDocument, xml: string, filePath: string) => void;
@@ -34,6 +35,7 @@ interface DocumentState {
   getRecentFileContent: (fileId: string) => Promise<string>;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
+  setEdited: (edited: boolean) => void;
 }
 
 const DEFAULT_MAX_RECENT_FILES = 300;
@@ -162,11 +164,20 @@ function buildRecentFiles(
     : "memory";
   const label = getFileLabel(fileId);
   const meta = doc ? extractDocumentMeta(doc) : {};
+  const existing = recentFiles.find((entry) => entry.id === fileId);
+  const edited = existing?.edited === true || undefined;
 
-  return [
-    { id: fileId, label, source, lastOpenedAt: now, documentType, ...meta },
-    ...recentFiles.filter((entry) => entry.id !== fileId),
-  ].slice(0, maxFiles);
+  const newEntry: RecentFileEntry = {
+    id: fileId,
+    label,
+    source,
+    lastOpenedAt: now,
+    documentType,
+    edited,
+    ...meta,
+  };
+
+  return [newEntry, ...recentFiles.filter((entry) => entry.id !== fileId)].slice(0, maxFiles);
 }
 
 function getInitialTheme(): "light" | "dark" {
@@ -219,9 +230,11 @@ function getRecentFiles(): RecentFileEntry[] {
               entry.documentType === "nfe" ||
               entry.documentType === "cte" ||
               entry.documentType === "nfse" ||
-              entry.documentType === "nfse-sped"
+              entry.documentType === "nfse-sped" ||
+              entry.documentType === "xml"
                 ? entry.documentType
                 : undefined,
+            edited: entry.edited === true || undefined,
             chave: typeof entry.chave === "string" ? entry.chave : undefined,
             numero: typeof entry.numero === "string" ? entry.numero : undefined,
             cnpjEmitente: typeof entry.cnpjEmitente === "string" ? entry.cnpjEmitente : undefined,
@@ -307,6 +320,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   error: null,
   maxRecentFiles: getMaxRecentFiles(),
   downloadDir: getDownloadDir(),
+  isEdited: false,
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
@@ -331,6 +345,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const doc = parseXml(content);
       const now = Date.now();
       const existingEntry = get().recentFiles.find((f) => f.id === fileId);
+      const wasEdited = existingEntry?.edited === true;
       const isRecentlyOpened =
         existingEntry != null && now - existingEntry.lastOpenedAt < 60_000;
       const recent = isRecentlyOpened
@@ -356,6 +371,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         loading: false,
         error: null,
         validation: null,
+        isEdited: wasEdited,
       });
     } catch (e) {
       set({
@@ -384,7 +400,23 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       currentFilePath: filePath,
       recentFiles: recent,
       error: null,
+      validation: null,
+      isEdited: false,
     });
+  },
+
+  setEdited: (edited) => {
+    const filePath = get().currentFilePath;
+    if (filePath) {
+      const updated = get().recentFiles.map((entry) =>
+        entry.id === filePath ? { ...entry, edited: edited || undefined } : entry,
+      );
+      const xmlCache = getRecentFileCache();
+      persistRecentFiles(updated, xmlCache);
+      set({ isEdited: edited, recentFiles: updated });
+    } else {
+      set({ isEdited: edited });
+    }
   },
 
   setValidation: (v) => set({ validation: v }),
@@ -396,6 +428,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       currentFilePath: null,
       validation: null,
       error: null,
+      isEdited: false,
     }),
 
   toggleTheme: () => {
@@ -547,6 +580,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
             : null,
       validation: null,
+      isEdited: false,
     });
 
     return { loaded, skipped, limitIncreased, newLimit: currentMax };

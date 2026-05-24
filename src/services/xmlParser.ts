@@ -39,7 +39,7 @@ export function detectDocumentType(xml: string): DocumentType {
   if (lowerXml.includes("infnfse") || lowerXml.includes("<nfse")) {
     return "nfse";
   }
-  throw new Error("Tipo de documento XML não reconhecido. Suportados: NF-e, CT-e, NFS-e.");
+  return "xml";
 }
 
 export function parseXml(xmlString: string): ParsedDocument {
@@ -61,6 +61,8 @@ export function parseXml(xmlString: string): ParsedDocument {
       return { documentType: "nfse", nfse: parseNfse(xmlDoc) };
     case "nfse-sped":
       return { documentType: "nfse-sped", spedNfse: parseSpedNfse(xmlDoc) };
+    default:
+      return { documentType: "xml" };
   }
 }
 

@@ -1,4 +1,4 @@
-export type DocumentType = "nfe" | "cte" | "nfse" | "nfse-sped";
+export type DocumentType = "nfe" | "cte" | "nfse" | "nfse-sped" | "xml";
 
 export interface RecentFileEntry {
   id: string;
@@ -6,6 +6,7 @@ export interface RecentFileEntry {
   source: "filesystem" | "memory";
   lastOpenedAt: number;
   documentType?: DocumentType;
+  edited?: boolean;
   // Metadados para busca
   chave?: string;
   numero?: string;

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { FileText, Receipt, Truck } from "lucide-react";
+import { FileText, Receipt, Truck, Code2 } from "lucide-react";
 import type { DocumentType } from "@/types/common";
 
 interface DocumentMeta {
@@ -32,6 +32,12 @@ const DOCUMENT_META: Record<DocumentType, DocumentMeta> = {
     label: "NFS-e (Nacional)",
     badgeClassName:
       "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/12 dark:text-amber-300 dark:ring-amber-500/30",
+  },
+  xml: {
+    icon: Code2,
+    label: "XML",
+    badgeClassName:
+      "bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-200 dark:bg-gray-500/12 dark:text-gray-300 dark:ring-gray-500/30",
   },
 };
 
