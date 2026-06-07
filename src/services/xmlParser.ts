@@ -7,6 +7,14 @@ function getEl(parent: Element, tagName: string): Element | null {
   return parent.getElementsByTagName(tagName)[0] || null;
 }
 
+function requireEl(parent: Element, tagName: string, context: string): Element {
+  const el = getEl(parent, tagName);
+  if (!el) {
+    throw new Error(`Elemento ${tagName} não encontrado em ${context}.`);
+  }
+  return el;
+}
+
 function getTxt(parent: Element, tagName: string): string {
   const el = getEl(parent, tagName);
   return el?.textContent?.trim() ?? "";
@@ -21,8 +29,38 @@ export function detectDocumentType(xml: string): DocumentType {
   if (normalizedXml.length === 0) {
     throw new Error("Arquivo XML vazio.");
   }
+
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(normalizedXml, "text/xml");
+    const parseError = xmlDoc.getElementsByTagName("parsererror");
+    if (parseError.length === 0) {
+      const root = xmlDoc.documentElement;
+      const rootName = root.localName.toLowerCase();
+      const namespace = root.namespaceURI?.toLowerCase() ?? "";
+
+      if (namespace.includes("sped.fazenda.gov.br/nfse") || getEl(root, "infNFSe")) {
+        return "nfse-sped";
+      }
+      if (rootName.includes("cte") || namespace.includes("portalfiscal.inf.br/cte") || getEl(root, "infCte")) {
+        return "cte";
+      }
+      if (rootName.includes("nfe") || namespace.includes("portalfiscal.inf.br/nfe") || getEl(root, "infNFe")) {
+        return "nfe";
+      }
+      if (rootName.includes("nfse") || namespace.includes("abrasf") || getEl(root, "InfNfse") || getEl(root, "InfNFSe")) {
+        return "nfse";
+      }
+    }
+  } catch {
+    // Fall back to textual detection; parseXml will report invalid XML later.
+  }
+
   const lowerXml = normalizedXml.toLowerCase();
 
+  if (lowerXml.includes("sped.fazenda.gov.br/nfse")) {
+    return "nfse-sped";
+  }
   // CT-e must be checked before NF-e because CT-e XMLs can contain <infNFe> references
   if (lowerXml.includes("cteproc") || lowerXml.includes("<cte") || lowerXml.includes("infcte") || lowerXml.includes("portalfiscal.inf.br/cte")) {
     return "cte";
@@ -32,9 +70,6 @@ export function detectDocumentType(xml: string): DocumentType {
   }
   if (lowerXml.includes("compnfse") || lowerXml.includes("abrasf")) {
     return "nfse";
-  }
-  if (lowerXml.includes("sped.fazenda.gov.br/nfse")) {
-    return "nfse-sped";
   }
   if (lowerXml.includes("infnfse") || lowerXml.includes("<nfse")) {
     return "nfse";
@@ -72,7 +107,7 @@ export function parseXml(xmlString: string): ParsedDocument {
 
 function parseNfe(doc: Document): Nfe {
   const infNFeEl = getEl(doc.documentElement, "infNFe");
-  if (!infNFeEl) throw new Error("Elemento infNFe não encontrado no XML.");
+  if (!infNFeEl) throw new Error("Documento detectado como NF-e, mas o elemento infNFe não foi encontrado.");
 
   const protNFeEl = getEl(doc.documentElement, "protNFe");
 
@@ -83,11 +118,11 @@ function parseNfe(doc: Document): Nfe {
 }
 
 function parseInfNFe(el: Element): InfNFe {
-  const ideEl = getEl(el, "ide")!;
-  const emitEl = getEl(el, "emit")!;
+  const ideEl = requireEl(el, "ide", "infNFe");
+  const emitEl = requireEl(el, "emit", "infNFe");
   const destEl = getEl(el, "dest");
-  const totalEl = getEl(el, "total")!;
-  const transpEl = getEl(el, "transp")!;
+  const totalEl = requireEl(el, "total", "infNFe");
+  const transpEl = requireEl(el, "transp", "infNFe");
   const cobrEl = getEl(el, "cobr");
   const pagEl = getEl(el, "pag");
   const infAdicEl = getEl(el, "infAdic");
@@ -153,7 +188,7 @@ function parseEndereco(el: Element) {
 }
 
 function parseEmit(el: Element): Emit {
-  const enderEl = getEl(el, "enderEmit")!;
+  const enderEl = requireEl(el, "enderEmit", "emit");
   return {
     CNPJ: getTxt(el, "CNPJ") || undefined,
     CPF: getTxt(el, "CPF") || undefined,
@@ -181,8 +216,9 @@ function parseDest(el: Element): Dest {
 }
 
 function parseDet(el: Element): Det {
-  const prodEl = getEl(el, "prod")!;
-  const impostoEl = getEl(el, "imposto")!;
+  const item = el.getAttribute("nItem") || "item da NF-e";
+  const prodEl = requireEl(el, "prod", `det ${item}`);
+  const impostoEl = requireEl(el, "imposto", `det ${item}`);
   return {
     nItem: el.getAttribute("nItem") || "",
     prod: parseProd(prodEl),
@@ -282,7 +318,7 @@ function parseCofins(el: Element): CofinsGroup {
 }
 
 function parseTotal(el: Element): Total {
-  const icmsTotEl = getEl(el, "ICMSTot")!;
+  const icmsTotEl = requireEl(el, "ICMSTot", "total");
   return {
     ICMSTot: parseICMSTot(icmsTotEl),
   };
@@ -400,7 +436,7 @@ function parseInfAdic(el: Element): InfAdic {
 }
 
 function parseProtNFe(el: Element): ProtNFe {
-  const infProtEl = getEl(el, "infProt")!;
+  const infProtEl = requireEl(el, "infProt", "protNFe");
   return {
     infProt: {
       tpAmb: getTxt(infProtEl, "tpAmb"),
@@ -421,7 +457,7 @@ function parseProtNFe(el: Element): ProtNFe {
 
 function parseCte(doc: Document): Cte {
   const infCteEl = getEl(doc.documentElement, "infCte");
-  if (!infCteEl) throw new Error("Elemento infCte não encontrado no XML.");
+  if (!infCteEl) throw new Error("Documento detectado como CT-e, mas o elemento infCte não foi encontrado.");
 
   const protCTeEl = getEl(doc.documentElement, "protCTe");
 
@@ -432,15 +468,15 @@ function parseCte(doc: Document): Cte {
 }
 
 function parseInfCte(el: Element): InfCte {
-  const ideEl = getEl(el, "ide")!;
+  const ideEl = requireEl(el, "ide", "infCte");
   const complEl = getEl(el, "compl");
-  const emitEl = getEl(el, "emit")!;
+  const emitEl = requireEl(el, "emit", "infCte");
   const remEl = getEl(el, "rem");
   const expedEl = getEl(el, "exped");
   const recebEl = getEl(el, "receb");
   const destEl = getEl(el, "dest");
-  const vPrestEl = getEl(el, "vPrest")!;
-  const impEl = getEl(el, "imp")!;
+  const vPrestEl = requireEl(el, "vPrest", "infCte");
+  const impEl = requireEl(el, "imp", "infCte");
   const infCTeNormEl = getEl(el, "infCTeNorm");
   const infAdicEl = getEl(el, "infAdic");
 
@@ -502,7 +538,7 @@ function parseComplCte(el: Element): ComplCte {
 }
 
 function parseEmitCte(el: Element): EmitCte {
-  const enderEl = getEl(el, "enderEmit")!;
+  const enderEl = requireEl(el, "enderEmit", "emit");
   return {
     CNPJ: getTxt(el, "CNPJ"),
     IE: getTxt(el, "IE"),
@@ -573,7 +609,7 @@ function parseImpCte(el: Element): ImpCte {
 }
 
 function parseInfCTeNorm(el: Element): InfCTeNorm {
-  const infCargaEl = getEl(el, "infCarga")!;
+  const infCargaEl = requireEl(el, "infCarga", "infCTeNorm");
   const infDocEl = getEl(el, "infDoc");
   const infModalEl = getEl(el, "infModal");
 
@@ -621,7 +657,7 @@ function parseInfModal(el: Element): InfModal {
 }
 
 function parseProtCTe(el: Element): ProtCTe {
-  const infProtEl = getEl(el, "infProt")!;
+  const infProtEl = requireEl(el, "infProt", "protCTe");
   return {
     infProt: {
       tpAmb: getTxt(infProtEl, "tpAmb"),
@@ -661,7 +697,7 @@ function parseNfse(doc: Document): CompNfse {
 
 function parseInfNfse(el: Element): InfNfse {
   const valoresNfseEl = getEl(el, "ValoresNfse");
-  const prestadorEl = getEl(el, "PrestadorServico")!;
+  const prestadorEl = requireEl(el, "PrestadorServico", "InfNfse");
   const tomadorEl = getEl(el, "TomadorServico");
   const orgaoEl = getEl(el, "OrgaoGerador");
   const dpsEl = getEl(el, "DeclaracaoPrestacaoServico");
@@ -743,7 +779,7 @@ function parseContato(el: Element): Contato {
 }
 
 function parsePrestador(el: Element): PrestadorServico {
-  const identEl = getEl(el, "IdentificacaoPrestador")!;
+  const identEl = requireEl(el, "IdentificacaoPrestador", "PrestadorServico");
   const enderecoEl = getEl(el, "Endereco");
   const contatoEl = getEl(el, "Contato");
   return {
@@ -813,7 +849,7 @@ function parseDPS(el: Element, fallbackServicoEl?: Element | null): DeclaracaoPr
 }
 
 function parseServico(el: Element): Servico {
-  const valoresEl = getEl(el, "Valores")!;
+  const valoresEl = requireEl(el, "Valores", "Servico");
   return {
     valores: parseValoresServico(valoresEl),
     itemListaServico: getTxt(el, "ItemListaServico"),
@@ -832,7 +868,7 @@ function parseSpedNfse(doc: Document): SpedCompNfse {
   const root = doc.documentElement;
   const infNFSeEl = getEl(root, "infNFSe");
   if (!infNFSeEl) {
-    throw new Error("Elemento infNFSe não encontrado no XML NFS-e (Padrão Nacional).");
+    throw new Error("Documento detectado como NFS-e Padrão Nacional, mas o elemento infNFSe não foi encontrado.");
   }
 
   return {
@@ -841,13 +877,13 @@ function parseSpedNfse(doc: Document): SpedCompNfse {
 }
 
 function parseSpedInfNfse(el: Element) {
-  const emitEl = getEl(el, "emit")!;
-  const valoresEl = getEl(el, "valores")!;
+  const emitEl = requireEl(el, "emit", "infNFSe");
+  const valoresEl = requireEl(el, "valores", "infNFSe");
   const dpsEl = getEl(el, "DPS");
 
   let dps: import("@/types/nfse").SpedDps | undefined;
   if (dpsEl) {
-    dps = { infDPS: parseSpedInfDps(getEl(dpsEl, "infDPS")!) };
+    dps = { infDPS: parseSpedInfDps(requireEl(dpsEl, "infDPS", "DPS")) };
   }
 
   return {
@@ -875,7 +911,7 @@ function parseSpedInfNfse(el: Element) {
 }
 
 function parseSpedEmit(el: Element) {
-  const enderEl = getEl(el, "enderNac")!;
+  const enderEl = requireEl(el, "enderNac", "emit");
   return {
     CNPJ: getTxt(el, "CNPJ"),
     xNome: getTxt(el, "xNome"),
@@ -894,10 +930,10 @@ function parseSpedEmit(el: Element) {
 }
 
 function parseSpedInfDps(el: Element) {
-  const prestEl = getEl(el, "prest")!;
-  const tomaEl = getEl(el, "toma")!;
-  const servEl = getEl(el, "serv")!;
-  const valoresDpsEl = getEl(el, "valores")!;
+  const prestEl = requireEl(el, "prest", "infDPS");
+  const tomaEl = requireEl(el, "toma", "infDPS");
+  const servEl = requireEl(el, "serv", "infDPS");
+  const valoresDpsEl = requireEl(el, "valores", "infDPS");
 
   return {
     id: el.getAttribute("Id") || "",
@@ -959,8 +995,8 @@ function parseSpedTomador(el: Element) {
 }
 
 function parseSpedServico(el: Element) {
-  const locPrestEl = getEl(el, "locPrest")!;
-  const cServEl = getEl(el, "cServ")!;
+  const locPrestEl = requireEl(el, "locPrest", "serv");
+  const cServEl = requireEl(el, "cServ", "serv");
   return {
     locPrest: {
       cLocPrestacao: getTxt(locPrestEl, "cLocPrestacao"),
@@ -973,7 +1009,7 @@ function parseSpedServico(el: Element) {
 }
 
 function parseSpedValoresDps(el: Element) {
-  const vServPrestEl = getEl(el, "vServPrest")!;
+  const vServPrestEl = requireEl(el, "vServPrest", "valores");
   const tribEl = getEl(el, "trib");
 
   let trib;
@@ -989,7 +1025,7 @@ function parseSpedValoresDps(el: Element) {
       },
       tribFed: tribFedEl ? {
         piscofins: {
-          CST: getTxt(getEl(tribFedEl, "piscofins")!, "CST"),
+          CST: getTxt(getEl(tribFedEl, "piscofins") ?? tribFedEl, "CST"),
         },
       } : undefined,
       totTrib: totTribEl ? {
