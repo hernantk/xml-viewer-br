@@ -13,6 +13,7 @@ import {
   Settings,
   ArrowUpCircle,
   RefreshCw,
+  SearchCheck,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useFileOpen } from "@/hooks/useFileOpen";
@@ -20,6 +21,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { SettingsModal } from "@/components/common/SettingsModal";
 import { BatchPdfModal } from "@/components/common/BatchPdfModal";
 import { XmlDownloadModal } from "@/components/common/XmlDownloadModal";
+import { ChaveValidatorModal } from "@/components/common/ChaveValidatorModal";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
 import { isTauriRuntime } from "@/utils/runtime";
 import type { UpdaterStatus } from "@/hooks/useUpdater";
@@ -43,6 +45,7 @@ export function Header({
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [xmlDownloadOpen, setXmlDownloadOpen] = useState(false);
+  const [chaveValidatorOpen, setChaveValidatorOpen] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
@@ -97,6 +100,17 @@ export function Header({
         >
           <CloudDownload size={16} />
           Baixar XML
+        </button>
+      )}
+
+      {showBatchButton && (
+        <button
+          onClick={() => setChaveValidatorOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          title="Verificar chave de 44 dígitos"
+        >
+          <SearchCheck size={16} />
+          Verificar Chave
         </button>
       )}
 
@@ -199,6 +213,7 @@ export function Header({
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
       </button>
 
+      <ChaveValidatorModal open={chaveValidatorOpen} onClose={() => setChaveValidatorOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <XmlDownloadModal open={xmlDownloadOpen} onClose={() => setXmlDownloadOpen(false)} />
       <BatchPdfModal
@@ -213,6 +228,7 @@ export function Header({
         errors={batchPdf.errors}
         validationMessage={batchPdf.validationMessage}
         sourceFileCount={batchPdf.sourceFileCount}
+        includeSubfolders={batchPdf.includeSubfolders}
         batchDocument={batchPdf.batchDocument}
         canRun={batchPdf.canRun}
         onClose={batchPdf.closeModal}
@@ -221,6 +237,7 @@ export function Header({
         onRunBatch={batchPdf.runBatch}
         onZipFileNameChange={batchPdf.setZipFileName}
         onOutputDirChange={batchPdf.setOutputDir}
+        onIncludeSubfoldersChange={batchPdf.setIncludeSubfolders}
       />
     </header>
     {importNotice && (

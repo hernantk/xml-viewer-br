@@ -19,6 +19,7 @@ interface BatchPdfModalProps {
   errors: BatchErrorItem[];
   validationMessage: string;
   sourceFileCount: number;
+  includeSubfolders: boolean;
   batchDocument: ParsedDocument | null;
   canRun: boolean;
   onClose: () => void;
@@ -27,6 +28,7 @@ interface BatchPdfModalProps {
   onRunBatch: () => Promise<void>;
   onZipFileNameChange: (value: string) => void;
   onOutputDirChange: (value: string) => void;
+  onIncludeSubfoldersChange: (value: boolean) => void;
 }
 
 const MAX_VISIBLE_ERRORS = 4;
@@ -43,6 +45,7 @@ export function BatchPdfModal({
   errors,
   validationMessage,
   sourceFileCount,
+  includeSubfolders,
   batchDocument,
   canRun,
   onClose,
@@ -51,6 +54,7 @@ export function BatchPdfModal({
   onRunBatch,
   onZipFileNameChange,
   onOutputDirChange,
+  onIncludeSubfoldersChange,
 }: BatchPdfModalProps) {
   if (!open) {
     return null;
@@ -107,9 +111,19 @@ export function BatchPdfModal({
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {sourceDir
-                    ? `${sourceFileCount} arquivo(s) XML encontrado(s) na raiz da pasta.`
-                    : "A leitura nao entra em subpastas nesta versao."}
+                    ? `${sourceFileCount} arquivo(s) XML encontrado(s)${includeSubfolders ? " (incluindo subpastas)." : " na raiz da pasta."}`
+                    : "Selecione uma pasta com arquivos XML."}
                 </p>
+                <label className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={includeSubfolders}
+                    onChange={(e) => onIncludeSubfoldersChange(e.target.checked)}
+                    disabled={isRunning}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                  />
+                  Incluir subpastas
+                </label>
               </div>
               <button
                 type="button"

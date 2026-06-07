@@ -55,6 +55,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
   const [batchDocument, setBatchDocument] = useState<ParsedDocument | null>(null);
   const [validationMessage, setValidationMessage] = useState("");
   const [sourceFileCount, setSourceFileCount] = useState(0);
+  const [includeSubfolders, setIncludeSubfolders] = useState(false);
   const [zipBytes, setZipBytes] = useState<Uint8Array | null>(null);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     setBatchDocument(null);
     setValidationMessage("");
     setSourceFileCount(0);
+    setIncludeSubfolders(false);
     setZipBytes(null);
     setSourceDir("");
     setOutputDir(initialOutputDir);
@@ -105,13 +107,14 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
       return [];
     }
 
-    const files = await discoverXmlFiles(directory);
+    const recursive = includeSubfolders;
+    const files = await discoverXmlFiles(directory, recursive);
     setSourceFileCount(files.length);
     if (files.length === 0) {
       setValidationMessage("Nenhum arquivo XML foi encontrado na pasta selecionada.");
     }
     return files;
-  }, []);
+  }, [includeSubfolders]);
 
   const pickSourceDir = useCallback(async () => {
     const directory = await pickDirectory();
@@ -330,8 +333,10 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     batchDocument,
     validationMessage,
     sourceFileCount,
+    includeSubfolders,
     canRun,
     setZipFileName,
+    setIncludeSubfolders,
     setOutputDir,
     openModal,
     closeModal,
