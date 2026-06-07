@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Clock, FileDown, Printer, Search, Trash2 } from "lucide-react";
+import { Clock, FileDown, Pin, Printer, Search, Trash2 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useRecentFilePdfExport } from "@/hooks/useRecentFilePdfExport";
 import { BatchRenderSurface } from "@/components/viewers/BatchRenderSurface";
@@ -33,6 +33,7 @@ export function Sidebar() {
   const recentFiles = useDocumentStore((s) => s.recentFiles);
   const loadFile = useDocumentStore((s) => s.loadFile);
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
+  const togglePin = useDocumentStore((s) => s.togglePin);
   const currentFilePath = useDocumentStore((s) => s.currentFilePath);
   const {
     exportRecentPdf,
@@ -80,6 +81,12 @@ export function Sidebar() {
     removeRecentFile(contextMenu.fileId);
     closeMenu();
   }, [contextMenu, removeRecentFile, closeMenu]);
+
+  const handleTogglePin = useCallback(() => {
+    if (!contextMenu) return;
+    togglePin(contextMenu.fileId);
+    closeMenu();
+  }, [contextMenu, togglePin, closeMenu]);
 
   // Close context menu on click outside or Escape
   useEffect(() => {
@@ -273,6 +280,20 @@ export function Sidebar() {
                           </span>
                         </span>
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePin(recentFile.id);
+                        }}
+                        className={`shrink-0 p-0.5 rounded transition ${
+                          recentFile.pinned
+                            ? "text-blue-500 hover:text-blue-600"
+                            : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
+                        }`}
+                        title={recentFile.pinned ? "Desafixar" : "Fixar"}
+                      >
+                        <Pin size={12} />
+                      </button>
                       <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
                         {formatTimeSince(
                           recentFile.lastOpenedAt,
@@ -315,6 +336,15 @@ export function Sidebar() {
           >
             <Printer size={14} />
             {printing ? "Imprimindo..." : "Imprimir"}
+          </button>
+          <button
+            onClick={handleTogglePin}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <Pin size={14} />
+            {recentFiles.find((f) => f.id === contextMenu.fileId)?.pinned
+              ? "Desafixar"
+              : "Fixar"}
           </button>
           <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
           <button

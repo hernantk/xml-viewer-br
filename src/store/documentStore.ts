@@ -32,6 +32,7 @@ interface DocumentState {
   setDownloadDir: (dir: string) => void;
   initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
+  togglePin: (fileId: string) => void;
   getRecentFileContent: (fileId: string) => Promise<string>;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
@@ -166,6 +167,7 @@ function buildRecentFiles(
   const meta = doc ? extractDocumentMeta(doc) : {};
   const existing = recentFiles.find((entry) => entry.id === fileId);
   const edited = existing?.edited === true || undefined;
+  const pinned = existing?.pinned === true || undefined;
 
   const newEntry: RecentFileEntry = {
     id: fileId,
@@ -175,9 +177,18 @@ function buildRecentFiles(
     documentType,
     edited,
     ...meta,
+    pinned,
   };
 
-  return [newEntry, ...recentFiles.filter((entry) => entry.id !== fileId)].slice(0, maxFiles);
+  let result = [newEntry, ...recentFiles.filter((entry) => entry.id !== fileId)];
+
+  result.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return b.lastOpenedAt - a.lastOpenedAt;
+  });
+
+  return result.slice(0, maxFiles);
 }
 
 function getInitialTheme(): "light" | "dark" {
@@ -235,6 +246,7 @@ function getRecentFiles(): RecentFileEntry[] {
                 ? entry.documentType
                 : undefined,
             edited: entry.edited === true || undefined,
+            pinned: entry.pinned === true || undefined,
             chave: typeof entry.chave === "string" ? entry.chave : undefined,
             numero: typeof entry.numero === "string" ? entry.numero : undefined,
             cnpjEmitente: typeof entry.cnpjEmitente === "string" ? entry.cnpjEmitente : undefined,
@@ -495,6 +507,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     } else {
       set({ recentFiles: updated });
     }
+  },
+
+  togglePin: (fileId: string) => {
+    const updated = get().recentFiles.map((entry) =>
+      entry.id === fileId
+        ? { ...entry, pinned: entry.pinned ? undefined : true }
+        : entry,
+    );
+    updated.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.lastOpenedAt - a.lastOpenedAt;
+    });
+    const xmlCache = getRecentFileCache();
+    persistRecentFiles(updated, xmlCache);
+    set({ recentFiles: updated });
   },
 
   getRecentFileContent: async (fileId: string) => {

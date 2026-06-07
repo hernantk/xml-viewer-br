@@ -7,6 +7,7 @@ export interface RecentFileEntry {
   lastOpenedAt: number;
   documentType?: DocumentType;
   edited?: boolean;
+  pinned?: boolean;
   // Metadados para busca
   chave?: string;
   numero?: string;
