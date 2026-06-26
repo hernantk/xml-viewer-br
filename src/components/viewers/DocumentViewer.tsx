@@ -1,5 +1,6 @@
 import { useDocumentStore } from "@/store/documentStore";
 import { DANFEViewer } from "./DANFEViewer";
+import { AdditionalItemsPanel } from "./AdditionalItemsPanel";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
 import { SpedNFSeViewer } from "./SpedNFSeViewer";
@@ -412,6 +413,10 @@ export function DocumentViewer() {
           </div>
         )}
       </div>
+
+      {doc.documentType === "nfe" && doc.nfe && (
+        <AdditionalItemsPanel nfe={doc.nfe} />
+      )}
 
       {downloadNotice && (
         <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg no-print">

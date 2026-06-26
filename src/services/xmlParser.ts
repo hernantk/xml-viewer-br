@@ -1,5 +1,5 @@
 import type { ParsedDocument, DocumentType } from "@/types/common";
-import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
+import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Rastro, Med, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
 import type { Cte, InfCte, IdeCte, EmitCte, PartyCte, VPrest, ImpCte, IcmsCte, InfCTeNorm, InfCarga, InfDoc, InfModal, ComplCte, ProtCTe } from "@/types/cte";
 import type { CompNfse, InfNfse, ValoresNfse, PrestadorServico, TomadorServico, EnderecoNfse, Contato, OrgaoGerador, DeclaracaoPrestacaoServico, Servico, ValoresServico, SpedCompNfse } from "@/types/nfse";
 
@@ -246,6 +246,30 @@ function parseProd(el: Element): Prod {
     vSeg: getTxt(el, "vSeg") || undefined,
     vDesc: getTxt(el, "vDesc") || undefined,
     vOutro: getTxt(el, "vOutro") || undefined,
+    rastro: parseRastro(el),
+    med: parseMed(el),
+  };
+}
+
+function parseRastro(el: Element): Rastro[] | undefined {
+  const rastroEls = Array.from(el.children).filter((c) => c.tagName === "rastro");
+  if (rastroEls.length === 0) return undefined;
+  return rastroEls.map((r) => ({
+    nLote: getTxt(r, "nLote"),
+    qLote: getTxt(r, "qLote") || undefined,
+    dFab: getTxt(r, "dFab") || undefined,
+    dVal: getTxt(r, "dVal") || undefined,
+    cAgreg: getTxt(r, "cAgreg") || undefined,
+  }));
+}
+
+function parseMed(el: Element): Med | undefined {
+  const medEl = getEl(el, "med");
+  if (!medEl) return undefined;
+  return {
+    cProdANVISA: getTxt(medEl, "cProdANVISA") || undefined,
+    xMotivoIsencao: getTxt(medEl, "xMotivoIsencao") || undefined,
+    vPMC: getTxt(medEl, "vPMC") || undefined,
   };
 }
 

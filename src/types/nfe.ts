@@ -89,6 +89,22 @@ export interface Prod {
   vSeg?: string;
   vDesc?: string;
   vOutro?: string;
+  rastro?: Rastro[];
+  med?: Med;
+}
+
+export interface Rastro {
+  nLote: string;
+  qLote?: string;
+  dFab?: string;
+  dVal?: string;
+  cAgreg?: string;
+}
+
+export interface Med {
+  cProdANVISA?: string;
+  xMotivoIsencao?: string;
+  vPMC?: string;
 }
 
 export interface Imposto {
