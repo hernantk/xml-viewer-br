@@ -128,7 +128,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     } catch (err) {
       setSourceFileCount(0);
       setValidationMessage(
-        err instanceof Error ? err.message : "Nao foi possivel ler a pasta selecionada.",
+        err instanceof Error ? err.message : "Não foi possível ler a pasta selecionada.",
       );
     }
   }, [refreshSourceDir]);
@@ -142,7 +142,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
 
   const persistZip = useCallback(async () => {
     if (!zipBytes) {
-      throw new Error("O arquivo ZIP ainda nao foi gerado.");
+      throw new Error("O arquivo ZIP ainda não foi gerado.");
     }
 
     const safeZipName = ensureZipFileName(zipFileName);
@@ -223,7 +223,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
 
           const viewerEl = document.getElementById("batch-document-viewer-content");
           if (!viewerEl) {
-            throw new Error("Superficie de renderizacao do lote nao encontrada.");
+            throw new Error("Superfície de renderização do lote não encontrada.");
           }
 
           const fileName = resolveUniquePdfFileName(getPdfBaseName(parsed), usedNames);
@@ -250,7 +250,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
       setCurrentFileName("");
 
       if (succeeded === 0) {
-        setValidationMessage("Nenhum PDF valido foi gerado a partir da pasta selecionada.");
+        setValidationMessage("Nenhum PDF válido foi gerado a partir da pasta selecionada.");
         setSummary({
           sourceDir,
           outputPath: null,
@@ -283,7 +283,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
         }
       } catch (err) {
         setValidationMessage(
-          `ZIP gerado em memoria, mas falhou ao salvar: ${
+          `ZIP gerado em memória, mas falhou ao salvar: ${
             err instanceof Error ? err.message : String(err)
           }`,
         );

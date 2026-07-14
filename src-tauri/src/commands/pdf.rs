@@ -63,7 +63,7 @@ pub async fn create_pdf_render_window(
     .decorations(false)
     .visible(false)
     .build()
-    .map_err(|e| format!("Erro ao criar janela de renderizacao de PDF: {e}"))?;
+    .map_err(|e| format!("Erro ao criar janela de renderização de PDF: {e}"))?;
 
     Ok(())
 }
@@ -301,7 +301,7 @@ mod win {
 
         // Wait for PDF navigation to complete (with timeout)
         rx.recv_timeout(Duration::from_secs(15))
-            .map_err(|_| "Timeout ao carregar PDF para impressão".to_string())?
+            .map_err(|_| "Tempo esgotado ao carregar PDF para impressão".to_string())?
             .map_err(|e| e)?;
 
         // Inject script to print after PDF finishes rendering in the browser

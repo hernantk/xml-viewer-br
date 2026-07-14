@@ -84,7 +84,7 @@ export function parseXml(xmlString: string): ParsedDocument {
 
   const parseError = xmlDoc.getElementsByTagName("parsererror");
   if (parseError.length > 0) {
-    throw new Error("XML inválido: " + (parseError[0].textContent || "erro de parsing"));
+    throw new Error("XML inválido: " + (parseError[0].textContent || "erro de análise"));
   }
 
   switch (docType) {

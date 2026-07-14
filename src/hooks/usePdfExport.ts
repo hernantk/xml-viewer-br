@@ -28,7 +28,7 @@ async function fallbackHtml2CanvasPdf(
 ): Promise<string | null> {
   const viewerEl = document.getElementById("document-viewer-content");
   if (!viewerEl) {
-    throw new Error("Elemento do viewer nao encontrado");
+    throw new Error("Elemento do visualizador não encontrado");
   }
 
   const { generatePdfFromElement } = await import("@/services/pdfGenerator");
@@ -157,7 +157,7 @@ export function usePdfExport() {
           await invoke("print_to_pdf", { outputPath: tmpPath });
         } catch {
           const viewerEl = document.getElementById("document-viewer-content");
-          if (!viewerEl) throw new Error("Elemento do viewer nao encontrado");
+          if (!viewerEl) throw new Error("Elemento do visualizador não encontrado");
           const { generatePdfFromElement } = await import("@/services/pdfGenerator");
           const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
           const { writeFile } = await import("@tauri-apps/plugin-fs");
@@ -177,7 +177,7 @@ export function usePdfExport() {
         }
       } else {
         const viewerEl = document.getElementById("document-viewer-content");
-        if (!viewerEl) throw new Error("Elemento do viewer nao encontrado");
+        if (!viewerEl) throw new Error("Elemento do visualizador não encontrado");
 
         const { generatePdfFromElement } = await import("@/services/pdfGenerator");
         const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
@@ -188,7 +188,7 @@ export function usePdfExport() {
         const printWindow = window.open(url, "_blank");
         if (!printWindow) {
           URL.revokeObjectURL(url);
-          throw new Error("Popup bloqueado. Permita popups para este site.");
+          throw new Error("Pop-up bloqueado. Permita janelas pop-up para este site.");
         }
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       }

@@ -314,7 +314,7 @@ function persistRecentFiles(
 
 async function readFilesystemFile(path: string): Promise<string> {
   if (!isTauriRuntime()) {
-    throw new Error("Abrir caminhos do sistema de arquivos so esta disponivel no app desktop.");
+    throw new Error("Abrir caminhos do sistema de arquivos só está disponível no app desktop.");
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
@@ -347,7 +347,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         } else {
           if (!canReopenRecentFile(fileId)) {
             throw new Error(
-              "Esse arquivo recente nao esta disponivel neste ambiente.",
+              "Esse arquivo recente não está disponível neste ambiente.",
             );
           }
           content = await readFilesystemFile(fileId);
@@ -532,7 +532,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
 
     if (!canReopenRecentFile(fileId)) {
-      throw new Error("Esse arquivo recente nao esta disponivel neste ambiente.");
+      throw new Error("Esse arquivo recente não está disponível neste ambiente.");
     }
 
     return readFilesystemFile(fileId);
@@ -640,7 +640,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (files.length === 0) {
       const message = skipped > 0
         ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
-        : "Nenhum arquivo XML valido foi encontrado.";
+        : "Nenhum arquivo XML válido foi encontrado.";
       set({ loading: false, error: message });
       return { loaded: 0, skipped, limitIncreased: false, newLimit: get().maxRecentFiles };
     }

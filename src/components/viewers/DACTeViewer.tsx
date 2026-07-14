@@ -130,13 +130,13 @@ function PartyBlock({
     <div>
       <SectionTitle>{title}</SectionTitle>
       <div className="grid grid-cols-[1fr_170px_130px]">
-        <Field label="Nome / RazÃ£o Social" value={party.xNome} />
+        <Field label="Nome / Razão Social" value={party.xNome} />
         <Field label="CNPJ / CPF" value={formatCNPJorCPF(party.CNPJ || party.CPF)} />
         <Field label="IE" value={party.IE || ""} />
       </div>
       <div className="grid grid-cols-[1fr_150px_60px_120px]">
-        <Field label="EndereÃ§o" value={`${party.endereco.xLgr}, ${party.endereco.nro}`} />
-        <Field label="MunicÃ­pio" value={party.endereco.xMun} />
+        <Field label="Endereço" value={`${party.endereco.xLgr}, ${party.endereco.nro}`} />
+        <Field label="Município" value={party.endereco.xMun} />
         <Field label="UF" value={party.endereco.UF} />
         <Field label="Fone" value={party.fone ? formatPhone(party.fone) : ""} />
       </div>
@@ -162,21 +162,21 @@ export function DACTeViewer({ cte }: Props) {
         <div className="rounded border border-black p-[3pt]">
           <div className="text-[7pt] leading-[1.2]">
             RECEBEMOS DE <span className="font-bold">{emit.xNome}</span> OS
-            SERVIÃ‡OS CONSTANTES DO CONHECIMENTO DE TRANSPORTE ELETRÃ”NICO INDICADO
+            SERVIÇOS CONSTANTES DO CONHECIMENTO DE TRANSPORTE ELETRÔNICO INDICADO
             AO LADO.
           </div>
           <div className="grid grid-cols-2 mt-[3pt] border-t border-black pt-[2pt]">
             <Field label="Data de Recebimento" value="" />
-            <Field label="IdentificaÃ§Ã£o e Assinatura do Recebedor" value="" />
+            <Field label="Identificação e Assinatura do Recebedor" value="" />
           </div>
         </div>
         <div className="rounded border border-black p-[3pt] text-center min-w-[110px] flex flex-col justify-center">
           <div className="text-[14pt] font-bold">CT-e</div>
           <div className="text-[10pt] font-bold mt-[2pt]">
-            N.Âº <span className="font-bold">{ide.nCT}</span>
+            N.º <span className="font-bold">{ide.nCT}</span>
           </div>
           <div className="text-[10pt] font-bold">
-            SÃ©rie <span className="font-bold">{ide.serie}</span>
+            Série <span className="font-bold">{ide.serie}</span>
           </div>
         </div>
       </div>
@@ -216,13 +216,13 @@ export function DACTeViewer({ cte }: Props) {
             <br />
             Conhecimento de Transporte
             <br />
-            EletrÃ´nico
+            Eletrônico
           </div>
           <div className="mt-[2pt] text-[10pt] font-bold">
-            CT-e N.Âº <span className="font-bold">{formatNFNumber(ide.nCT)}</span>
+            CT-e N.º <span className="font-bold">{formatNFNumber(ide.nCT)}</span>
           </div>
           <div className="text-[10pt] font-bold">
-            SÃ©rie <span className="font-bold">{ide.serie}</span>
+            Série <span className="font-bold">{ide.serie}</span>
           </div>
           <div className="text-[8pt] mt-[2pt] leading-[1.1]">
             Modal:{" "}
@@ -257,7 +257,7 @@ export function DACTeViewer({ cte }: Props) {
 
       <div className="grid grid-cols-4 border-t border-black">
         <Field label="CFOP" value={`${ide.CFOP} - ${ide.natOp}`} />
-        <Field label="Data de EmissÃ£o" value={formatDate(ide.dhEmi)} />
+        <Field label="Data de Emissão" value={formatDate(ide.dhEmi)} />
         <Field label="Origem" value={`${ide.xMunIni}/${ide.UFIni}`} />
         <Field label="Destino" value={`${ide.xMunFim}/${ide.UFFim}`} />
       </div>
@@ -266,10 +266,10 @@ export function DACTeViewer({ cte }: Props) {
 
   const valuesBlock = (
     <div>
-      <SectionTitle>Valores da PrestaÃ§Ã£o do ServiÃ§o</SectionTitle>
+      <SectionTitle>Valores da Prestação do Serviço</SectionTitle>
       <div className="grid grid-cols-3">
         <FieldRight
-          label="Valor Total da PrestaÃ§Ã£o"
+          label="Valor Total da Prestação"
           value={formatCurrency(vPrest.vTPrest)}
         />
         <FieldRight label="Valor a Receber" value={formatCurrency(vPrest.vRec)} />
@@ -290,15 +290,15 @@ export function DACTeViewer({ cte }: Props) {
 
   const taxesBlock = (
     <div>
-      <SectionTitle>InformaÃ§Ãµes Relativas ao Imposto</SectionTitle>
+      <SectionTitle>Informações Relativas ao Imposto</SectionTitle>
       <div className="grid grid-cols-5">
-        <Field label="SituaÃ§Ã£o TributÃ¡ria" value={imp.ICMS.CST} />
+        <Field label="Situação Tributária" value={imp.ICMS.CST} />
         <FieldRight
-          label="Base de CÃ¡lculo"
+          label="Base de Cálculo"
           value={imp.ICMS.vBC ? formatCurrency(imp.ICMS.vBC) : ""}
         />
         <FieldRight
-          label="AlÃ­quota"
+          label="Alíquota"
           value={imp.ICMS.pICMS ? `${imp.ICMS.pICMS}%` : ""}
         />
         <FieldRight
@@ -316,7 +316,7 @@ export function DACTeViewer({ cte }: Props) {
   const cargoBlock =
     infCTeNorm && (
       <div>
-        <SectionTitle>InformaÃ§Ãµes da Carga</SectionTitle>
+        <SectionTitle>Informações da Carga</SectionTitle>
         <div className="grid grid-cols-3">
           <Field label="Produto Predominante" value={infCTeNorm.infCarga.proPred} />
           <FieldRight
@@ -346,7 +346,7 @@ export function DACTeViewer({ cte }: Props) {
     infCTeNorm?.infDoc?.infNFe &&
     infCTeNorm.infDoc.infNFe.length > 0 && (
       <div>
-        <SectionTitle>Documentos OriginÃ¡rios</SectionTitle>
+        <SectionTitle>Documentos Originários</SectionTitle>
         <div className="px-[2pt] py-[1pt] space-y-[1pt]">
           {infCTeNorm.infDoc.infNFe.map((nf, i) => (
             <div key={i} className="text-[8pt] leading-[1.1]">
@@ -363,7 +363,7 @@ export function DACTeViewer({ cte }: Props) {
       <div className="grid grid-cols-2">
         <div className="rounded border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] leading-[1.1] uppercase">
-            InformaÃ§Ãµes Complementares
+            Informações Complementares
           </div>
           <div className="text-[6pt] mt-[1pt] whitespace-pre-wrap min-h-[50px] leading-[1.1]">
             {infAdic?.infCpl || "\u00A0"}
@@ -386,7 +386,7 @@ export function DACTeViewer({ cte }: Props) {
     { key: "separator", node: separatorBlock },
     { key: "header", node: headerBlock },
     { key: "rem", node: <PartyBlock title="Remetente" party={rem} /> },
-    { key: "dest", node: <PartyBlock title="DestinatÃ¡rio" party={dest} /> },
+    { key: "dest", node: <PartyBlock title="Destinatário" party={dest} /> },
     { key: "exped", node: <PartyBlock title="Expedidor" party={exped} /> },
     { key: "receb", node: <PartyBlock title="Recebedor" party={receb} /> },
     { key: "values", node: valuesBlock },

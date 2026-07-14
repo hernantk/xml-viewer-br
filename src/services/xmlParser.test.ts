@@ -81,7 +81,7 @@ describe("parseXml", () => {
     expect(parseXml("<root><value>1</value></root>")).toEqual({ documentType: "xml" });
   });
 
-  it("reporta XML invalido", () => {
+  it("reporta XML inválido", () => {
     expect(() => parseXml("<root>")).toThrow("XML inválido:");
   });
 

@@ -76,7 +76,7 @@ export function Header({
       <button
         onClick={onToggleSidebar}
         className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-        title={sidebarOpen ? "Fechar sidebar" : "Abrir sidebar"}
+        title={sidebarOpen ? "Fechar barra lateral" : "Abrir barra lateral"}
       >
         {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
       </button>

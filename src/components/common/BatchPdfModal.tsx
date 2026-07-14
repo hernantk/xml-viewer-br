@@ -80,7 +80,7 @@ export function BatchPdfModal({
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
             <div>
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Processo em lote XML para PDF
+                Processamento em lote de XML para PDF
               </h2>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Processa uma pasta de XML e entrega um ZIP com um PDF por documento.
@@ -139,13 +139,13 @@ export function BatchPdfModal({
             <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Pasta de saida
+                  Pasta de saída
                 </label>
                 <input
                   type="text"
                   value={outputDir}
                   onChange={(e) => onOutputDirChange(e.target.value)}
-                  placeholder="Salvar via dialogo se vazio"
+                  placeholder="Salvar via diálogo se vazio"
                   disabled={isRunning}
                   className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 />
@@ -169,7 +169,7 @@ export function BatchPdfModal({
                 className="inline-flex items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <FolderOpen size={16} />
-                Saida
+                Saída
               </button>
             </div>
 
@@ -184,7 +184,7 @@ export function BatchPdfModal({
                 {summary && (
                   <div className={`grid gap-2 text-sm ${validationMessage ? "mt-3" : ""}`}>
                     <p className="font-medium text-gray-800 dark:text-gray-100">
-                      Resumo da ultima execucao
+                      Resumo da última execução
                     </p>
                     <p className="text-gray-600 dark:text-gray-300">
                       Origem: <span className="font-medium">{summary.sourceDir}</span>
@@ -199,7 +199,7 @@ export function BatchPdfModal({
                     <p className="text-gray-600 dark:text-gray-300">
                       ZIP:{" "}
                       <span className="font-medium">
-                        {summary.outputPath ?? "Gerado em memoria, aguardando salvamento"}
+                        {summary.outputPath ?? "Gerado em memória, aguardando salvamento"}
                       </span>
                     </p>
                   </div>
@@ -218,7 +218,7 @@ export function BatchPdfModal({
                   </p>
                 </div>
                 <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-                  <p>Validos: {progress.succeeded}</p>
+                  <p>Válidos: {progress.succeeded}</p>
                   <p>Ignorados: {progress.failed}</p>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export function BatchPdfModal({
                   ))}
                   {hiddenErrorCount > 0 && (
                     <p className="text-red-600 dark:text-red-400">
-                      Mais {hiddenErrorCount} erro(s) nao exibido(s).
+                      Mais {hiddenErrorCount} erro(s) não exibido(s).
                     </p>
                   )}
                 </div>

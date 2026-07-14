@@ -5,7 +5,7 @@ pub enum AppError {
     #[error("Erro ao ler arquivo: {0}")]
     FileError(String),
 
-    #[error("Erro ao parsear XML: {0}")]
+    #[error("Erro ao analisar XML: {0}")]
     XmlParseError(String),
 
     #[error("Tipo de documento não reconhecido")]

@@ -78,7 +78,7 @@ function EditModal({
       const doc = parser.parseFromString(trimmed, "text/xml");
       const parseErrorEl = doc.getElementsByTagName("parsererror");
       if (parseErrorEl.length > 0) {
-        setError("XML inválido: " + (parseErrorEl[0].textContent || "erro de parsing"));
+        setError("XML inválido: " + (parseErrorEl[0].textContent || "erro de análise"));
         return;
       }
       onSave(trimmed);

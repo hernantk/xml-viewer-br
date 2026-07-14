@@ -45,7 +45,7 @@ async function generateNativePdfInHiddenWindow(
   await new Promise<void>(async (resolve, reject) => {
     const timeoutId = window.setTimeout(() => {
       void unlisten.then((dispose) => dispose());
-      reject(new Error("Timeout ao gerar PDF em janela oculta."));
+      reject(new Error("Tempo esgotado ao gerar PDF em janela oculta."));
     }, 30000);
 
     const unlisten = listen<{
@@ -97,7 +97,7 @@ export function useRecentFilePdfExport() {
 
       const viewerEl = window.document.getElementById(RENDER_SURFACE_ID);
       if (!viewerEl) {
-        throw new Error("Superficie de renderizacao do PDF nao encontrada.");
+        throw new Error("Superfície de renderização do PDF não encontrada.");
       }
 
       const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
@@ -210,7 +210,7 @@ export function useRecentFilePdfExport() {
         const printWindow = window.open(url, "_blank");
         if (!printWindow) {
           URL.revokeObjectURL(url);
-          throw new Error("Popup bloqueado. Permita popups para este site.");
+          throw new Error("Pop-up bloqueado. Permita janelas pop-up para este site.");
         }
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       } catch (err) {

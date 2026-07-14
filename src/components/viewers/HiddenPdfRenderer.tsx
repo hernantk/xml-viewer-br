@@ -51,7 +51,7 @@ export function HiddenPdfRenderer() {
 
       try {
         if (!label || !fileId || !outputPath) {
-          throw new Error("Parametros de renderizacao de PDF invalidos.");
+          throw new Error("Parâmetros de renderização de PDF inválidos.");
         }
 
         const content = await getRecentFileContent(fileId);

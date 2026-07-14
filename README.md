@@ -36,7 +36,7 @@ Se quiser acompanhar ou apoiar o trabalho, acesse:
 
 ## Como executar
 
-### Requisitos para implementar em seu sistema
+### Requisitos para executar no seu sistema
 
 - Node.js 18+
 - npm
@@ -54,7 +54,7 @@ Se quiser acompanhar ou apoiar o trabalho, acesse:
 
 ## Objetivo do projeto
 
-Este repositório serve como base para um visualizador nacional de XML fiscal, com foco em uso local, simplicidade operacional e experiência de leitura. A arquitetura foi organizada para permitir evolução futura em parsing, validação, novos layouts e suporte a outros documentos fiscais.
+Este repositório serve como base para um visualizador nacional de XML fiscal, com foco em uso local, simplicidade operacional e experiência de leitura. A arquitetura foi organizada para permitir evolução futura em análise, validação, novos layouts e suporte a outros documentos fiscais.
 
 ## Licença
 
