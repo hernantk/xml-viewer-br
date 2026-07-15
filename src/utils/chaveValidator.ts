@@ -47,7 +47,7 @@ const UF_MAP: Record<string, string> = {
 const MODELO_MAP: Record<string, string> = {
   "55": "NF-e",
   "57": "CT-e",
-  "65": "NFS-e",
+  "65": "NFC-e",
 };
 
 export function validateChave(chave: string): ChaveValidationResult {

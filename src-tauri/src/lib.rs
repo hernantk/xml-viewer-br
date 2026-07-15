@@ -112,6 +112,7 @@ pub fn run() {
             commands::pdf::print_pdf_file,
             commands::pdf::create_pdf_render_window,
             commands::print::print_file,
+            commands::xml_download::nfe_download_supported,
             commands::xml_download::list_user_certificates,
             commands::xml_download::close_nfe_download_window,
             commands::xml_download::open_nfe_download_window,

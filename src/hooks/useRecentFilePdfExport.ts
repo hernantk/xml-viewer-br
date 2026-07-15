@@ -4,7 +4,7 @@ import { parseXml } from "@/services/xmlParser";
 import { generatePdfFromElement } from "@/services/pdfGenerator";
 import { getPdfBaseName } from "@/utils/documentFileNames";
 import { isTauriRuntime } from "@/utils/runtime";
-import type { ParsedDocument } from "@/types/common";
+import type { PrintableDocument } from "@/types/common";
 
 const RENDER_SURFACE_ID = "recent-document-viewer-content";
 
@@ -79,7 +79,7 @@ async function generateNativePdfInHiddenWindow(
 }
 
 export function useRecentFilePdfExport() {
-  const [renderDocument, setRenderDocument] = useState<ParsedDocument | null>(null);
+  const [renderDocument, setRenderDocument] = useState<PrintableDocument | null>(null);
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [exportNotice, setExportNotice] = useState("");
@@ -88,11 +88,11 @@ export function useRecentFilePdfExport() {
 
   const preparePdf = useCallback(
     async (fileId: string) => {
-      const content = await getRecentFileContent(fileId);
+      const { content, edited } = await getRecentFileContent(fileId);
       const parsedDocument = parseXml(content);
       const defaultName = getPdfBaseName(parsedDocument);
 
-      setRenderDocument(parsedDocument);
+      setRenderDocument({ document: parsedDocument, xml: content, edited });
       await waitForNextPaint();
 
       const viewerEl = window.document.getElementById(RENDER_SURFACE_ID);
@@ -100,7 +100,9 @@ export function useRecentFilePdfExport() {
         throw new Error("Superfície de renderização do PDF não encontrada.");
       }
 
-      const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+      const pdfBytes = await generatePdfFromElement(viewerEl, defaultName, {
+        edited,
+      });
       return { defaultName, pdfBytes };
     },
     [getRecentFileContent],
@@ -108,7 +110,7 @@ export function useRecentFilePdfExport() {
 
   const getDefaultName = useCallback(
     async (fileId: string) => {
-      const content = await getRecentFileContent(fileId);
+      const { content } = await getRecentFileContent(fileId);
       return getPdfBaseName(parseXml(content));
     },
     [getRecentFileContent],
@@ -146,7 +148,7 @@ export function useRecentFilePdfExport() {
             await writePdfFile(outputPath, pdfBytes);
           }
           if (tauriRuntime) {
-            setExportNotice(`Exportacao concluida com sucesso. Salvo em ${outputPath}`);
+            setExportNotice(`Exportação concluída com sucesso. Salvo em ${outputPath}`);
             setTimeout(() => setExportNotice(""), 3500);
           }
           return;
@@ -163,7 +165,7 @@ export function useRecentFilePdfExport() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } catch (err) {
-        console.error("Erro ao gerar PDF do historico:", err);
+        console.error("Erro ao gerar PDF do histórico:", err);
         alert(
           "Erro ao gerar PDF: " +
             (err instanceof Error ? err.message : String(err)),
@@ -214,7 +216,7 @@ export function useRecentFilePdfExport() {
         }
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       } catch (err) {
-        console.error("Erro ao imprimir PDF do historico:", err);
+        console.error("Erro ao imprimir PDF do histórico:", err);
         alert(
           "Erro ao imprimir: " +
             (err instanceof Error ? err.message : String(err)),

@@ -24,6 +24,11 @@ struct NfeXmlDownloadedPayload {
 }
 
 #[tauri::command]
+pub fn nfe_download_supported() -> bool {
+    cfg!(target_os = "windows")
+}
+
+#[tauri::command]
 pub async fn list_user_certificates() -> Result<Vec<UserCertificate>, String> {
     #[cfg(target_os = "windows")]
     {
@@ -73,6 +78,10 @@ pub async fn open_nfe_download_window(
     access_key: String,
     certificate_thumbprint: String,
 ) -> Result<(), String> {
+    if !nfe_download_supported() {
+        return Err("Download assistido de NF-e disponível apenas no Windows".into());
+    }
+
     let normalized_key: String = access_key.chars().filter(|c| c.is_ascii_digit()).collect();
     if normalized_key.len() != 44 {
         return Err("Informe uma chave de acesso de NF-e com 44 dígitos".into());

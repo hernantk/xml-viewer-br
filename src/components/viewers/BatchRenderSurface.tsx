@@ -1,16 +1,18 @@
-import type { ParsedDocument } from "@/types/common";
+import type { PrintableDocument } from "@/types/common";
 import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
 import { SpedNFSeViewer } from "./SpedNFSeViewer";
+import { GenericXmlViewer } from "./GenericXmlViewer";
+import { EditedDocumentWatermark } from "./EditedDocumentWatermark";
 
 interface BatchRenderSurfaceProps {
-  document: ParsedDocument | null;
+  printable: PrintableDocument | null;
   contentId?: string;
 }
 
-export function BatchRenderSurface({ document, contentId = "batch-document-viewer-content" }: BatchRenderSurfaceProps) {
-  if (!document) {
+export function BatchRenderSurface({ printable, contentId = "batch-document-viewer-content" }: BatchRenderSurfaceProps) {
+  if (!printable) {
     return (
       <div
         aria-hidden="true"
@@ -19,12 +21,14 @@ export function BatchRenderSurface({ document, contentId = "batch-document-viewe
     );
   }
 
+  const { document, edited, xml } = printable;
+
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none fixed -left-[200vw] top-0 w-[794px] overflow-hidden opacity-0"
     >
-      <div id={contentId}>
+      <div id={contentId} className="relative">
         {document.documentType === "nfe" && document.nfe ? (
           <DANFEViewer nfe={document.nfe} />
         ) : document.documentType === "cte" && document.cte ? (
@@ -33,7 +37,10 @@ export function BatchRenderSurface({ document, contentId = "batch-document-viewe
           <NFSeViewer nfse={document.nfse} />
         ) : document.documentType === "nfse-sped" && document.spedNfse ? (
           <SpedNFSeViewer nfse={document.spedNfse} />
+        ) : document.documentType === "xml" ? (
+          <GenericXmlViewer xml={xml} />
         ) : null}
+        {edited && <EditedDocumentWatermark />}
       </div>
     </div>
   );

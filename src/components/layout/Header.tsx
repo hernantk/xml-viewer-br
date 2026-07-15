@@ -23,7 +23,7 @@ import { BatchPdfModal } from "@/components/common/BatchPdfModal";
 import { XmlDownloadModal } from "@/components/common/XmlDownloadModal";
 import { ChaveValidatorModal } from "@/components/common/ChaveValidatorModal";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
-import { isTauriRuntime } from "@/utils/runtime";
+import { isNfeDownloadSupported, isTauriRuntime } from "@/utils/runtime";
 import type { UpdaterStatus } from "@/hooks/useUpdater";
 
 interface HeaderProps {
@@ -46,6 +46,7 @@ export function Header({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [xmlDownloadOpen, setXmlDownloadOpen] = useState(false);
   const [chaveValidatorOpen, setChaveValidatorOpen] = useState(false);
+  const [nfeDownloadSupported, setNfeDownloadSupported] = useState(false);
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const validation = useDocumentStore((s) => s.validation);
   const theme = useDocumentStore((s) => s.theme);
@@ -54,10 +55,26 @@ export function Header({
   const { openFile, importNotice } = useFileOpen();
   const { exportPdf, exporting, printPdf, printing, exportNotice } = usePdfExport();
   const batchPdf = useBatchPdfExport({ initialOutputDir: downloadDir });
-  const showBatchButton = isTauriRuntime();
+  const tauriRuntime = isTauriRuntime();
+
+  useEffect(() => {
+    let cancelled = false;
+    void isNfeDownloadSupported().then((supported) => {
+      if (!cancelled) {
+        setNfeDownloadSupported(supported);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector("[data-block-global-shortcuts]")) {
+        return;
+      }
+
       if (
         (e.ctrlKey || e.metaKey) &&
         e.key.toLowerCase() === "p"
@@ -65,10 +82,17 @@ export function Header({
         e.preventDefault();
         printPdf();
       }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key.toLowerCase() === "o"
+      ) {
+        e.preventDefault();
+        void openFile();
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [printPdf]);
+  }, [openFile, printPdf]);
 
   return (
     <>
@@ -92,29 +116,27 @@ export function Header({
         Abrir
       </button>
 
-      {showBatchButton && (
+      {nfeDownloadSupported && (
         <button
           onClick={() => setXmlDownloadOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-          title="Baixar XML de NF-e"
+          title="Consultar e baixar NF-e na SEFAZ"
         >
           <CloudDownload size={16} />
-          Baixar XML
+          Consultar NF-e
         </button>
       )}
 
-      {showBatchButton && (
-        <button
-          onClick={() => setChaveValidatorOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-          title="Verificar chave de 44 dígitos"
-        >
-          <SearchCheck size={16} />
-          Verificar Chave
-        </button>
-      )}
+      <button
+        onClick={() => setChaveValidatorOpen(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        title="Verificar formato e dígito verificador da chave"
+      >
+        <SearchCheck size={16} />
+        Verificar DV
+      </button>
 
-      {showBatchButton && (
+      {tauriRuntime && (
         <button
           onClick={batchPdf.openModal}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -215,7 +237,9 @@ export function Header({
 
       <ChaveValidatorModal open={chaveValidatorOpen} onClose={() => setChaveValidatorOpen(false)} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <XmlDownloadModal open={xmlDownloadOpen} onClose={() => setXmlDownloadOpen(false)} />
+      {nfeDownloadSupported && (
+        <XmlDownloadModal open={xmlDownloadOpen} onClose={() => setXmlDownloadOpen(false)} />
+      )}
       <BatchPdfModal
         open={batchPdf.isOpen}
         isRunning={batchPdf.isRunning}
@@ -229,6 +253,7 @@ export function Header({
         validationMessage={batchPdf.validationMessage}
         sourceFileCount={batchPdf.sourceFileCount}
         includeSubfolders={batchPdf.includeSubfolders}
+        isScanningSource={batchPdf.isScanningSource}
         batchDocument={batchPdf.batchDocument}
         canRun={batchPdf.canRun}
         onClose={batchPdf.closeModal}
@@ -237,7 +262,7 @@ export function Header({
         onRunBatch={batchPdf.runBatch}
         onZipFileNameChange={batchPdf.setZipFileName}
         onOutputDirChange={batchPdf.setOutputDir}
-        onIncludeSubfoldersChange={batchPdf.setIncludeSubfolders}
+        onIncludeSubfoldersChange={batchPdf.changeIncludeSubfolders}
       />
     </header>
     {importNotice && (

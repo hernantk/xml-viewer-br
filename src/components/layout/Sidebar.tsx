@@ -119,13 +119,13 @@ export function Sidebar() {
 
   useEffect(() => {
     if (!isTauriRuntime()) {
-      setAppVersion("1.0.0");
+      setAppVersion(null);
       return;
     }
     import("@tauri-apps/api/app")
       .then(({ getVersion }) => getVersion())
       .then(setAppVersion)
-      .catch(() => setAppVersion("1.0.0"));
+      .catch(() => setAppVersion(null));
   }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
@@ -362,7 +362,7 @@ export function Sidebar() {
           {exportNotice}
         </div>
       )}
-      <BatchRenderSurface document={renderDocument} contentId={renderSurfaceId} />
+      <BatchRenderSurface printable={renderDocument} contentId={renderSurfaceId} />
     </aside>
   );
 }

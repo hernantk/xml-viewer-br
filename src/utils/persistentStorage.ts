@@ -25,9 +25,11 @@ const PERSISTED_KEYS = [
   "xmlviewer-selected-cert",
 ] as const;
 
-type PersistedData = Partial<Record<string, string>>;
+type PersistedKey = (typeof PERSISTED_KEYS)[number];
+type PersistedData = Partial<Record<PersistedKey, string>>;
 
 let appDataDir: string | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
 
 async function getStoragePath(): Promise<string | null> {
   if (!isTauriRuntime()) return null;
@@ -44,19 +46,28 @@ async function getStoragePath(): Promise<string | null> {
   }
 }
 
-async function readStorageFile(): Promise<PersistedData> {
+async function readStorageFile(): Promise<PersistedData | null> {
   const dir = await getStoragePath();
-  if (!dir) return {};
+  if (!dir) return null;
 
   try {
     const { readTextFile } = await import("@tauri-apps/plugin-fs");
     const raw = await readTextFile(`${dir}${STORAGE_FILENAME}`);
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed as PersistedData;
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      const data: PersistedData = {};
+      for (const key of PERSISTED_KEYS) {
+        const value = (parsed as Record<string, unknown>)[key];
+        if (typeof value === "string") {
+          data[key] = value;
+        }
+      }
+      return data;
+    }
   } catch {
     // File doesn't exist yet or is corrupted — that's fine.
   }
-  return {};
+  return null;
 }
 
 async function writeStorageFile(data: PersistedData): Promise<void> {
@@ -84,27 +95,37 @@ async function writeStorageFile(data: PersistedData): Promise<void> {
  * Restore localStorage from the persistent file when keys are missing.
  * Call this once during app startup.
  */
-export async function restoreIfNeeded(): Promise<void> {
+interface RestoreOptions {
+  writeBack?: boolean;
+}
+
+export async function restoreIfNeeded({
+  writeBack = true,
+}: RestoreOptions = {}): Promise<void> {
   if (!isTauriRuntime()) return;
 
-  // Check if localStorage seems empty (main key missing)
-  const hasRecentFiles = localStorage.getItem("xmlviewer-recent");
-  if (hasRecentFiles) {
-    // localStorage is intact — no restore needed, but let's sync
-    // the file to make sure it's up-to-date.
-    await persistToFile();
+  const missingKeys = PERSISTED_KEYS.filter(
+    (key) => localStorage.getItem(key) === null,
+  );
+
+  if (missingKeys.length === 0) {
     return;
   }
 
-  // localStorage is empty — try to restore from file
   const stored = await readStorageFile();
-  if (Object.keys(stored).length === 0) return;
+  if (stored === null) {
+    return;
+  }
 
-  for (const key of PERSISTED_KEYS) {
+  for (const key of missingKeys) {
     const value = stored[key];
-    if (value !== undefined && value !== null) {
+    if (typeof value === "string") {
       localStorage.setItem(key, value);
     }
+  }
+
+  if (writeBack) {
+    await persistToFile();
   }
 }
 
@@ -123,5 +144,9 @@ export async function persistToFile(): Promise<void> {
     }
   }
 
-  await writeStorageFile(data);
+  writeQueue = writeQueue.then(
+    () => writeStorageFile(data),
+    () => writeStorageFile(data),
+  );
+  await writeQueue;
 }

@@ -18,6 +18,10 @@ const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - MARGIN_MM * 2;
 // Scale for high-quality capture
 const CAPTURE_SCALE = 3;
 
+export interface PdfGenerationOptions {
+  edited?: boolean;
+}
+
 function createCanvasSlice(
   sourceCanvas: HTMLCanvasElement,
   sourceY: number,
@@ -50,6 +54,7 @@ function createCanvasSlice(
 export async function generatePdfFromElement(
   element: HTMLElement,
   _filename: string,
+  options: PdfGenerationOptions = {},
 ): Promise<Uint8Array> {
   const { html2canvas, jsPDF } = await loadDeps();
 
@@ -107,6 +112,10 @@ export async function generatePdfFromElement(
         windowWidth: 794,
       });
       addCanvasToPdf(pdf, canvas);
+    }
+
+    if (options.edited) {
+      addEditedWatermark(pdf);
     }
 
     const arrayBuffer = pdf.output("arraybuffer");
@@ -206,6 +215,20 @@ function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
   }
 }
 
+function addEditedWatermark(pdf: import("jspdf").jsPDF) {
+  const pageCount = pdf.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page++) {
+    pdf.setPage(page);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(34);
+    pdf.setTextColor(248, 170, 170);
+    pdf.text("XML EDITADO", A4_WIDTH_MM / 2, A4_HEIGHT_MM / 2, {
+      align: "center",
+      angle: 25,
+    });
+  }
+}
+
 function prepareCloneForPdf(root: HTMLElement) {
   root.querySelectorAll<HTMLElement>(".pdf-hidden").forEach((el) => {
     el.style.display = "none";
@@ -214,6 +237,12 @@ function prepareCloneForPdf(root: HTMLElement) {
   root.querySelectorAll<HTMLElement>(".pdf-only").forEach((el) => {
     el.style.display = "block";
   });
+
+  root
+    .querySelectorAll<HTMLElement>(".edited-document-watermark")
+    .forEach((el) => {
+      el.style.display = "none";
+    });
 }
 
 function forceWhiteBackgrounds(el: HTMLElement) {

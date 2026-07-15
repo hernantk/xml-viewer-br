@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeFile } from "@tauri-apps/plugin-fs";
 import type {
   BatchErrorItem,
   BatchProgress,
   BatchSummary,
-  ParsedDocument,
+  PrintableDocument,
 } from "@/types/common";
 import { discoverXmlFiles, pickDirectory } from "@/services/fileDiscovery";
 import { parseXml } from "@/services/xmlParser";
@@ -52,11 +52,13 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
   const [currentFileName, setCurrentFileName] = useState("");
   const [summary, setSummary] = useState<BatchSummary | null>(null);
   const [errors, setErrors] = useState<BatchErrorItem[]>([]);
-  const [batchDocument, setBatchDocument] = useState<ParsedDocument | null>(null);
+  const [batchDocument, setBatchDocument] = useState<PrintableDocument | null>(null);
   const [validationMessage, setValidationMessage] = useState("");
   const [sourceFileCount, setSourceFileCount] = useState(0);
   const [includeSubfolders, setIncludeSubfolders] = useState(false);
+  const [isScanningSource, setIsScanningSource] = useState(false);
   const [zipBytes, setZipBytes] = useState<Uint8Array | null>(null);
+  const scanRequestId = useRef(0);
 
   useEffect(() => {
     if (!isOpen) {
@@ -68,7 +70,9 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
   }, [initialOutputDir, isOpen]);
 
   const resetBatchState = useCallback(() => {
+    scanRequestId.current += 1;
     setIsRunning(false);
+    setIsScanningSource(false);
     setProgress(EMPTY_PROGRESS);
     setCurrentFileName("");
     setSummary(null);
@@ -96,25 +100,53 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     resetBatchState();
   }, [isRunning, resetBatchState]);
 
-  const refreshSourceDir = useCallback(async (directory: string) => {
+  const invalidateBatchOutput = useCallback(() => {
     setValidationMessage("");
     setSummary(null);
     setErrors([]);
     setZipBytes(null);
+  }, []);
+
+  const refreshSourceDir = useCallback(async (
+    directory: string,
+    recursive = includeSubfolders,
+  ) => {
+    const requestId = ++scanRequestId.current;
+    invalidateBatchOutput();
+    setSourceFileCount(0);
 
     if (!directory) {
-      setSourceFileCount(0);
+      setIsScanningSource(false);
       return [];
     }
 
-    const recursive = includeSubfolders;
-    const files = await discoverXmlFiles(directory, recursive);
-    setSourceFileCount(files.length);
-    if (files.length === 0) {
-      setValidationMessage("Nenhum arquivo XML foi encontrado na pasta selecionada.");
+    setIsScanningSource(true);
+    try {
+      const files = await discoverXmlFiles(directory, recursive);
+      if (requestId !== scanRequestId.current) {
+        return [];
+      }
+
+      setSourceFileCount(files.length);
+      if (files.length === 0) {
+        setValidationMessage("Nenhum arquivo XML foi encontrado na pasta selecionada.");
+      }
+      return files;
+    } catch (err) {
+      if (requestId === scanRequestId.current) {
+        setValidationMessage(
+          err instanceof Error
+            ? err.message
+            : "Não foi possível ler a pasta selecionada.",
+        );
+      }
+      return [];
+    } finally {
+      if (requestId === scanRequestId.current) {
+        setIsScanningSource(false);
+      }
     }
-    return files;
-  }, [includeSubfolders]);
+  }, [includeSubfolders, invalidateBatchOutput]);
 
   const pickSourceDir = useCallback(async () => {
     const directory = await pickDirectory();
@@ -123,15 +155,13 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     }
 
     setSourceDir(directory);
-    try {
-      await refreshSourceDir(directory);
-    } catch (err) {
-      setSourceFileCount(0);
-      setValidationMessage(
-        err instanceof Error ? err.message : "Não foi possível ler a pasta selecionada.",
-      );
-    }
+    await refreshSourceDir(directory);
   }, [refreshSourceDir]);
+
+  const changeIncludeSubfolders = useCallback(async (value: boolean) => {
+    setIncludeSubfolders(value);
+    await refreshSourceDir(sourceDir, value);
+  }, [refreshSourceDir, sourceDir]);
 
   const pickOutputDir = useCallback(async () => {
     const directory = await pickDirectory();
@@ -166,7 +196,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
   }, [outputDir, zipBytes, zipFileName]);
 
   const runBatch = useCallback(async () => {
-    if (isRunning) {
+    if (isRunning || isScanningSource) {
       return;
     }
 
@@ -218,7 +248,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
           const xmlContent = await readTextFile(file.path);
           const parsed = parseXml(xmlContent);
 
-          setBatchDocument(parsed);
+          setBatchDocument({ document: parsed, xml: xmlContent, edited: false });
           await waitForNextPaint();
 
           const viewerEl = document.getElementById("batch-document-viewer-content");
@@ -307,6 +337,7 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     }
   }, [
     isRunning,
+    isScanningSource,
     outputDir,
     persistZip,
     refreshSourceDir,
@@ -316,8 +347,12 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
   ]);
 
   const canRun = useMemo(
-    () => Boolean(sourceDir) && sourceFileCount > 0 && !isRunning,
-    [isRunning, sourceDir, sourceFileCount],
+    () =>
+      Boolean(sourceDir) &&
+      sourceFileCount > 0 &&
+      !isRunning &&
+      !isScanningSource,
+    [isRunning, isScanningSource, sourceDir, sourceFileCount],
   );
 
   return {
@@ -334,9 +369,10 @@ export function useBatchPdfExport({ initialOutputDir }: UseBatchPdfExportOptions
     validationMessage,
     sourceFileCount,
     includeSubfolders,
+    isScanningSource,
     canRun,
     setZipFileName,
-    setIncludeSubfolders,
+    changeIncludeSubfolders,
     setOutputDir,
     openModal,
     closeModal,

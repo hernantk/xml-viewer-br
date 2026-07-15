@@ -17,6 +17,11 @@ export interface RecentFileEntry {
   nomeDestinatario?: string;
 }
 
+export interface RecentFileContent {
+  content: string;
+  edited: boolean;
+}
+
 export interface Endereco {
   xLgr: string;
   nro: string;
@@ -58,6 +63,12 @@ export interface ParsedDocument {
   cte?: import("./cte").Cte;
   nfse?: import("./nfse").CompNfse;
   spedNfse?: import("./nfse").SpedCompNfse;
+}
+
+export interface PrintableDocument {
+  document: ParsedDocument;
+  xml: string;
+  edited: boolean;
 }
 
 export interface BatchProgress {

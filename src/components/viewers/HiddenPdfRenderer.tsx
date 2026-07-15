@@ -4,11 +4,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useDocumentStore } from "@/store/documentStore";
 import { parseXml } from "@/services/xmlParser";
-import type { ParsedDocument } from "@/types/common";
+import type { ParsedDocument, PrintableDocument } from "@/types/common";
 import { DANFEViewer } from "./DANFEViewer";
 import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
 import { SpedNFSeViewer } from "./SpedNFSeViewer";
+import { GenericXmlViewer } from "./GenericXmlViewer";
+import { EditedDocumentWatermark } from "./EditedDocumentWatermark";
 
 function waitForPrintLayout() {
   return new Promise<void>((resolve) => {
@@ -20,7 +22,7 @@ function waitForPrintLayout() {
   });
 }
 
-function renderDocument(document: ParsedDocument) {
+function renderDocument(document: ParsedDocument, xml: string) {
   if (document.documentType === "nfe" && document.nfe) {
     return <DANFEViewer nfe={document.nfe} />;
   }
@@ -33,11 +35,14 @@ function renderDocument(document: ParsedDocument) {
   if (document.documentType === "nfse-sped" && document.spedNfse) {
     return <SpedNFSeViewer nfse={document.spedNfse} />;
   }
+  if (document.documentType === "xml") {
+    return <GenericXmlViewer xml={xml} />;
+  }
   return null;
 }
 
 export function HiddenPdfRenderer() {
-  const [document, setDocument] = useState<ParsedDocument | null>(null);
+  const [printable, setPrintable] = useState<PrintableDocument | null>(null);
   const getRecentFileContent = useDocumentStore((s) => s.getRecentFileContent);
 
   useEffect(() => {
@@ -54,11 +59,11 @@ export function HiddenPdfRenderer() {
           throw new Error("Parâmetros de renderização de PDF inválidos.");
         }
 
-        const content = await getRecentFileContent(fileId);
+        const { content, edited } = await getRecentFileContent(fileId);
         const parsedDocument = parseXml(content);
         if (cancelled) return;
 
-        setDocument(parsedDocument);
+        setPrintable({ document: parsedDocument, xml: content, edited });
         await waitForPrintLayout();
         await invoke("print_to_pdf", { outputPath });
         await emit("recent-pdf-rendered", { label, ok: true });
@@ -84,8 +89,11 @@ export function HiddenPdfRenderer() {
 
   return (
     <main className="min-h-screen bg-white text-black print:bg-white">
-      <div id="document-viewer-content">
-        {document ? renderDocument(document) : null}
+      <div id="document-viewer-content" className="relative">
+        {printable
+          ? renderDocument(printable.document, printable.xml)
+          : null}
+        {printable?.edited && <EditedDocumentWatermark />}
       </div>
     </main>
   );

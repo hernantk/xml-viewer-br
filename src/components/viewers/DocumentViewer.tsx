@@ -5,6 +5,7 @@ import { DACTeViewer } from "./DACTeViewer";
 import { NFSeViewer } from "./NFSeViewer";
 import { SpedNFSeViewer } from "./SpedNFSeViewer";
 import { GenericXmlViewer } from "./GenericXmlViewer";
+import { EditedDocumentWatermark } from "./EditedDocumentWatermark";
 import { parseXml } from "@/services/xmlParser";
 import { isTauriRuntime } from "@/utils/runtime";
 import { AlertTriangle, Copy, Check, Download, Loader2, FileCode, Pen, Save } from "lucide-react";
@@ -88,7 +89,10 @@ function EditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 no-print">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 no-print"
+      data-block-global-shortcuts
+    >
       <div className="mx-4 w-full max-w-3xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
@@ -136,7 +140,6 @@ export function DocumentViewer() {
   const downloadDir = useDocumentStore((s) => s.downloadDir);
   const isEdited = useDocumentStore((s) => s.isEdited);
   const setDocument = useDocumentStore((s) => s.setDocument);
-  const setEdited = useDocumentStore((s) => s.setEdited);
   const [copied, setCopied] = useState(false);
   const [downloadNotice, setDownloadNotice] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -256,13 +259,11 @@ export function DocumentViewer() {
   const handleEditSave = (editedXml: string) => {
     try {
       const newDoc = parseXml(editedXml);
-      setDocument(newDoc, editedXml, currentFilePath || "editado");
-      setEdited(true);
+      setDocument(newDoc, editedXml, currentFilePath || "editado", true);
       setEditModalOpen(false);
     } catch (e) {
       const genericDoc = { documentType: "xml" as const };
-      setDocument(genericDoc, editedXml, currentFilePath || "editado");
-      setEdited(true);
+      setDocument(genericDoc, editedXml, currentFilePath || "editado", true);
       setEditModalOpen(false);
     }
   };
@@ -402,16 +403,7 @@ export function DocumentViewer() {
 
       <div id="document-viewer-content" className="relative">
         {viewer}
-        {isEdited && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden print:opacity-40 select-none">
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[64px] font-bold text-red-500/20 whitespace-nowrap rotate-[-25deg]"
-              style={{ fontFamily: "'Times New Roman', Times, serif" }}
-            >
-              XML EDITADO
-            </div>
-          </div>
-        )}
+        {isEdited && <EditedDocumentWatermark />}
       </div>
 
       {doc.documentType === "nfe" && doc.nfe && (

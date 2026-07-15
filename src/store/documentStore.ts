@@ -2,11 +2,13 @@ import { create } from "zustand";
 import type {
   DocumentType,
   ParsedDocument,
+  RecentFileContent,
   RecentFileEntry,
   ValidationResult,
 } from "@/types/common";
 import { parseXml } from "@/services/xmlParser";
 import { persistToFile } from "@/utils/persistentStorage";
+import { isTauriRuntime } from "@/utils/runtime";
 
 interface DocumentState {
   currentDocument: ParsedDocument | null;
@@ -22,7 +24,12 @@ interface DocumentState {
   isEdited: boolean;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
-  setDocument: (doc: ParsedDocument, xml: string, filePath: string) => void;
+  setDocument: (
+    doc: ParsedDocument,
+    xml: string,
+    filePath: string,
+    edited?: boolean,
+  ) => void;
   setValidation: (v: ValidationResult) => void;
   clearDocument: () => void;
   toggleTheme: () => void;
@@ -33,7 +40,7 @@ interface DocumentState {
   initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
   togglePin: (fileId: string) => void;
-  getRecentFileContent: (fileId: string) => Promise<string>;
+  getRecentFileContent: (fileId: string) => Promise<RecentFileContent>;
   loadMultipleFiles: (files: { id: string; content: string }[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   loadPaths: (paths: string[]) => Promise<{ loaded: number; skipped: number; limitIncreased: boolean; newLimit: number }>;
   setEdited: (edited: boolean) => void;
@@ -66,18 +73,6 @@ function getDownloadDir(): string {
     /* ignore */
   }
   return "";
-}
-
-function isTauriRuntime(): boolean {
-  const tauriWindow = window as Window & {
-    __TAURI_INTERNALS__?: { invoke?: unknown };
-  };
-
-  return (
-    typeof window !== "undefined" &&
-    typeof tauriWindow.__TAURI_INTERNALS__ === "object" &&
-    typeof tauriWindow.__TAURI_INTERNALS__.invoke === "function"
-  );
 }
 
 function canReopenRecentFile(filePath: string): boolean {
@@ -158,15 +153,18 @@ function buildRecentFiles(
   documentType?: DocumentType,
   maxFiles: number = DEFAULT_MAX_RECENT_FILES,
   doc?: ParsedDocument,
+  editedOverride?: boolean,
 ): RecentFileEntry[] {
   const now = Date.now();
-  const source: RecentFileEntry["source"] = canReopenRecentFile(fileId)
-    ? "filesystem"
-    : "memory";
   const label = getFileLabel(fileId);
   const meta = doc ? extractDocumentMeta(doc) : {};
   const existing = recentFiles.find((entry) => entry.id === fileId);
-  const edited = existing?.edited === true || undefined;
+  const source: RecentFileEntry["source"] =
+    existing?.source ?? (canReopenRecentFile(fileId) ? "filesystem" : "memory");
+  const edited =
+    editedOverride === undefined
+      ? existing?.edited === true || undefined
+      : editedOverride || undefined;
   const pinned = existing?.pinned === true || undefined;
 
   const newEntry: RecentFileEntry = {
@@ -234,7 +232,9 @@ function getRecentFiles(): RecentFileEntry[] {
                 ? entry.label
                 : getFileLabel(entry.id),
             source:
-              entry.source === "memory" ? "memory" : "filesystem",
+              entry.source === "memory" || !canReopenRecentFile(entry.id)
+                ? "memory"
+                : "filesystem",
             lastOpenedAt:
               typeof entry.lastOpenedAt === "number" ? entry.lastOpenedAt : 0,
             documentType:
@@ -295,18 +295,43 @@ function getRecentFileCache(): Record<string, string> {
   return {};
 }
 
+function trimRecentFileCache(
+  recentFiles: RecentFileEntry[],
+  xmlCache: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    recentFiles
+      .filter(
+        (entry) =>
+          (entry.source === "memory" || entry.edited === true) &&
+          typeof xmlCache[entry.id] === "string",
+      )
+      .map((entry) => [entry.id, xmlCache[entry.id]]),
+  );
+}
+
 function persistRecentFiles(
   recentFiles: RecentFileEntry[],
   xmlCache: Record<string, string>,
 ) {
-  localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recentFiles));
-
-  const trimmedCache = Object.fromEntries(
-    recentFiles
-      .filter((entry) => typeof xmlCache[entry.id] === "string")
-      .map((entry) => [entry.id, xmlCache[entry.id]]),
-  );
+  const trimmedCache = trimRecentFileCache(recentFiles, xmlCache);
+  const previousCache = localStorage.getItem(RECENT_CACHE_KEY);
+  // Cache first: if quota is exceeded, metadata never points to missing content.
   localStorage.setItem(RECENT_CACHE_KEY, JSON.stringify(trimmedCache));
+  try {
+    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recentFiles));
+  } catch (error) {
+    try {
+      if (previousCache === null) {
+        localStorage.removeItem(RECENT_CACHE_KEY);
+      } else {
+        localStorage.setItem(RECENT_CACHE_KEY, previousCache);
+      }
+    } catch {
+      // Preserve the original metadata write error if rollback also fails.
+    }
+    throw error;
+  }
 
   // Mirror to filesystem so data survives app updates
   void persistToFile();
@@ -321,12 +346,52 @@ async function readFilesystemFile(path: string): Promise<string> {
   return invoke<string>("read_file", { path });
 }
 
+async function resolveRecentFileContent(
+  fileId: string,
+  recentFiles: RecentFileEntry[],
+): Promise<RecentFileContent> {
+  const entry = recentFiles.find((recentFile) => recentFile.id === fileId);
+  const source =
+    entry?.source ?? (canReopenRecentFile(fileId) ? "filesystem" : "memory");
+  const cachedContent = getRecentFileCache()[fileId];
+
+  if (source === "memory" || entry?.edited === true) {
+    if (typeof cachedContent === "string") {
+      return {
+        content: cachedContent,
+        edited: entry?.edited === true,
+      };
+    }
+
+    if (source === "memory") {
+      throw new Error("Esse arquivo recente não está mais disponível no cache local.");
+    }
+  }
+
+  if (!canReopenRecentFile(fileId)) {
+    throw new Error("Esse arquivo recente não está disponível neste ambiente.");
+  }
+
+  return {
+    content: await readFilesystemFile(fileId),
+    edited: false,
+  };
+}
+
+const initialRecentFiles = getRecentFiles();
+const initialCache = getRecentFileCache();
+const trimmedInitialCache = trimRecentFileCache(initialRecentFiles, initialCache);
+if (JSON.stringify(trimmedInitialCache) !== JSON.stringify(initialCache)) {
+  localStorage.setItem(RECENT_CACHE_KEY, JSON.stringify(trimmedInitialCache));
+  void persistToFile();
+}
+
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   currentDocument: null,
   currentXml: null,
   currentFilePath: null,
   validation: null,
-  recentFiles: getRecentFiles(),
+  recentFiles: initialRecentFiles,
   theme: getInitialTheme(),
   loading: false,
   error: null,
@@ -340,39 +405,29 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     try {
       let content = xmlContent;
+      let edited = false;
       if (content === undefined) {
-        const cachedContent = getRecentFileCache()[fileId];
-        if (cachedContent) {
-          content = cachedContent;
-        } else {
-          if (!canReopenRecentFile(fileId)) {
-            throw new Error(
-              "Esse arquivo recente não está disponível neste ambiente.",
-            );
-          }
-          content = await readFilesystemFile(fileId);
-        }
+        const resolved = await resolveRecentFileContent(fileId, get().recentFiles);
+        content = resolved.content;
+        edited = resolved.edited;
       }
 
       const doc = parseXml(content);
-      const now = Date.now();
-      const existingEntry = get().recentFiles.find((f) => f.id === fileId);
-      const wasEdited = existingEntry?.edited === true;
-      const isRecentlyOpened =
-        existingEntry != null && now - existingEntry.lastOpenedAt < 60_000;
-      const recent = isRecentlyOpened
-        ? get().recentFiles
-        : buildRecentFiles(
-            fileId,
-            get().recentFiles,
-            doc.documentType,
-            get().maxRecentFiles,
-            doc,
-          );
-      const xmlCache = {
-        ...getRecentFileCache(),
-        [fileId]: content,
-      };
+      const recent = buildRecentFiles(
+        fileId,
+        get().recentFiles,
+        doc.documentType,
+        get().maxRecentFiles,
+        doc,
+        edited,
+      );
+      const recentEntry = recent.find((entry) => entry.id === fileId);
+      const xmlCache = { ...getRecentFileCache() };
+      if (recentEntry?.source === "memory" || edited) {
+        xmlCache[fileId] = content;
+      } else {
+        delete xmlCache[fileId];
+      }
       persistRecentFiles(recent, xmlCache);
 
       set({
@@ -383,7 +438,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         loading: false,
         error: null,
         validation: null,
-        isEdited: wasEdited,
+        isEdited: edited,
       });
     } catch (e) {
       set({
@@ -393,18 +448,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
   },
 
-  setDocument: (doc, xml, filePath) => {
+  setDocument: (doc, xml, filePath, edited = false) => {
     const recent = buildRecentFiles(
       filePath,
       get().recentFiles,
       doc.documentType,
       get().maxRecentFiles,
       doc,
+      edited,
     );
-    const xmlCache = {
-      ...getRecentFileCache(),
-      [filePath]: xml,
-    };
+    const recentEntry = recent.find((entry) => entry.id === filePath);
+    const xmlCache = { ...getRecentFileCache() };
+    if (recentEntry?.source === "memory" || edited) {
+      xmlCache[filePath] = xml;
+    } else {
+      delete xmlCache[filePath];
+    }
     persistRecentFiles(recent, xmlCache);
     set({
       currentDocument: doc,
@@ -413,7 +472,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       recentFiles: recent,
       error: null,
       validation: null,
-      isEdited: false,
+      isEdited: edited,
     });
   },
 
@@ -424,6 +483,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         entry.id === filePath ? { ...entry, edited: edited || undefined } : entry,
       );
       const xmlCache = getRecentFileCache();
+      const currentEntry = updated.find((entry) => entry.id === filePath);
+      const currentXml = get().currentXml;
+      if (edited && currentXml) {
+        xmlCache[filePath] = currentXml;
+      } else if (currentEntry?.source !== "memory") {
+        delete xmlCache[filePath];
+      }
       persistRecentFiles(updated, xmlCache);
       set({ isEdited: edited, recentFiles: updated });
     } else {
@@ -526,16 +592,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   getRecentFileContent: async (fileId: string) => {
-    const cachedContent = getRecentFileCache()[fileId];
-    if (cachedContent) {
-      return cachedContent;
-    }
-
-    if (!canReopenRecentFile(fileId)) {
-      throw new Error("Esse arquivo recente não está disponível neste ambiente.");
-    }
-
-    return readFilesystemFile(fileId);
+    return resolveRecentFileContent(fileId, get().recentFiles);
   },
 
   loadMultipleFiles: async (files) => {
@@ -579,8 +636,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           doc.documentType,
           currentMax,
           doc,
+          false,
         );
-        xmlCache[file.id] = file.content;
+        const recentEntry = recentFiles.find((entry) => entry.id === file.id);
+        if (recentEntry?.source === "memory") {
+          xmlCache[file.id] = file.content;
+        } else {
+          delete xmlCache[file.id];
+        }
         lastDoc = doc;
         lastXml = file.content;
         lastFilePath = file.id;

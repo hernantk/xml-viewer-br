@@ -3,7 +3,7 @@ import type {
   BatchErrorItem,
   BatchProgress,
   BatchSummary,
-  ParsedDocument,
+  PrintableDocument,
 } from "@/types/common";
 import { BatchRenderSurface } from "@/components/viewers/BatchRenderSurface";
 
@@ -20,7 +20,8 @@ interface BatchPdfModalProps {
   validationMessage: string;
   sourceFileCount: number;
   includeSubfolders: boolean;
-  batchDocument: ParsedDocument | null;
+  isScanningSource: boolean;
+  batchDocument: PrintableDocument | null;
   canRun: boolean;
   onClose: () => void;
   onPickSourceDir: () => Promise<void>;
@@ -46,6 +47,7 @@ export function BatchPdfModal({
   validationMessage,
   sourceFileCount,
   includeSubfolders,
+  isScanningSource,
   batchDocument,
   canRun,
   onClose,
@@ -110,7 +112,9 @@ export function BatchPdfModal({
                   className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {sourceDir
+                  {isScanningSource
+                    ? "Verificando arquivos XML..."
+                    : sourceDir
                     ? `${sourceFileCount} arquivo(s) XML encontrado(s)${includeSubfolders ? " (incluindo subpastas)." : " na raiz da pasta."}`
                     : "Selecione uma pasta com arquivos XML."}
                 </p>
@@ -119,7 +123,7 @@ export function BatchPdfModal({
                     type="checkbox"
                     checked={includeSubfolders}
                     onChange={(e) => onIncludeSubfoldersChange(e.target.checked)}
-                    disabled={isRunning}
+                    disabled={isRunning || isScanningSource}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
                   />
                   Incluir subpastas
@@ -128,7 +132,7 @@ export function BatchPdfModal({
               <button
                 type="button"
                 onClick={onPickSourceDir}
-                disabled={isRunning}
+                disabled={isRunning || isScanningSource}
                 className="inline-flex mt-[3px] items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <FolderOpen size={16} />
@@ -233,7 +237,9 @@ export function BatchPdfModal({
                   ? currentFileName
                     ? `Processando ${currentFileName}`
                     : "Preparando lote..."
-                  : sourceDir && sourceFileCount > 0
+                  : isScanningSource
+                    ? "Verificando a pasta selecionada..."
+                    : sourceDir && sourceFileCount > 0
                     ? `Pronto para gerar ${sourceFileCount} PDF(s) e compactar no ZIP final.`
                     : "Selecione uma pasta para preparar o lote."}
               </p>
@@ -287,7 +293,7 @@ export function BatchPdfModal({
           </div>
         </div>
       </div>
-      <BatchRenderSurface document={batchDocument} />
+      <BatchRenderSurface printable={batchDocument} />
     </>
   );
 }

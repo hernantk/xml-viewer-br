@@ -19,12 +19,6 @@ function extractChaveFromStore(): string {
   if (doc.documentType === "cte" && doc.cte) {
     return doc.cte.infCte.id.replace(/^CTe/, "");
   }
-  if (doc.documentType === "nfse" && doc.nfse) {
-    return doc.nfse.nfse.infNfse.codigoVerificacao || "";
-  }
-  if (doc.documentType === "nfse-sped" && doc.spedNfse) {
-    return doc.spedNfse.infNFSe.id.replace(/^NFS/, "");
-  }
   return "";
 }
 
@@ -78,10 +72,10 @@ export function ChaveValidatorModal({ open, onClose }: ChaveValidatorModalProps)
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div>
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Verificador de Chave NF-e / CT-e
+              Verificador de DV — NF-e, NFC-e e CT-e
             </h2>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              Valide o dígito verificador e extraia os dados da chave de 44 dígitos.
+              Confira localmente o formato, o dígito verificador e os campos da chave.
             </p>
           </div>
           <button
@@ -122,6 +116,10 @@ export function ChaveValidatorModal({ open, onClose }: ChaveValidatorModalProps)
                 Chave preenchida automaticamente a partir do documento aberto.
               </p>
             )}
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Esta verificação não consulta a SEFAZ nem comprova a existência,
+              autorização ou situação fiscal do documento.
+            </p>
           </div>
 
           {result && (
@@ -142,7 +140,7 @@ export function ChaveValidatorModal({ open, onClose }: ChaveValidatorModalProps)
                       ? "text-green-700 dark:text-green-300"
                       : "text-red-700 dark:text-red-300"
                   }`}>
-                    {result.valid ? "Chave válida" : result.error}
+                    {result.valid ? "Dígito verificador válido" : result.error}
                   </p>
 
                   {result.valid && result.chaveLimpa && (

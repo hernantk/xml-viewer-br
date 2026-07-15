@@ -25,6 +25,7 @@ async function tryNativePrintToPdf(outputPath: string): Promise<boolean> {
 async function fallbackHtml2CanvasPdf(
   defaultName: string,
   downloadDir: string,
+  edited: boolean,
 ): Promise<string | null> {
   const viewerEl = document.getElementById("document-viewer-content");
   if (!viewerEl) {
@@ -32,7 +33,7 @@ async function fallbackHtml2CanvasPdf(
   }
 
   const { generatePdfFromElement } = await import("@/services/pdfGenerator");
-  const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+  const pdfBytes = await generatePdfFromElement(viewerEl, defaultName, { edited });
 
   try {
     const { writeFile } = await import("@tauri-apps/plugin-fs");
@@ -78,6 +79,7 @@ export function usePdfExport() {
   const [exportNotice, setExportNotice] = useState("");
   const currentDocument = useDocumentStore((s) => s.currentDocument);
   const downloadDir = useDocumentStore((s) => s.downloadDir);
+  const isEdited = useDocumentStore((s) => s.isEdited);
 
   const exportPdf = useCallback(async () => {
     if (!currentDocument) return;
@@ -122,7 +124,11 @@ export function usePdfExport() {
         }
       }
 
-      const savedPath = await fallbackHtml2CanvasPdf(defaultName, downloadDir);
+      const savedPath = await fallbackHtml2CanvasPdf(
+        defaultName,
+        downloadDir,
+        isEdited,
+      );
       if (tauriRuntime && savedPath) {
         setExportNotice(`Exportação concluída com sucesso. Salvo em ${savedPath}`);
         setTimeout(() => setExportNotice(""), 3500);
@@ -136,7 +142,7 @@ export function usePdfExport() {
     } finally {
       setExporting(false);
     }
-  }, [currentDocument, downloadDir]);
+  }, [currentDocument, downloadDir, isEdited]);
 
   const printPdf = useCallback(async () => {
     if (!currentDocument) return;
@@ -159,7 +165,9 @@ export function usePdfExport() {
           const viewerEl = document.getElementById("document-viewer-content");
           if (!viewerEl) throw new Error("Elemento do visualizador não encontrado");
           const { generatePdfFromElement } = await import("@/services/pdfGenerator");
-          const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+          const pdfBytes = await generatePdfFromElement(viewerEl, defaultName, {
+            edited: isEdited,
+          });
           const { writeFile } = await import("@tauri-apps/plugin-fs");
           await writeFile(tmpPath, pdfBytes);
         }
@@ -180,7 +188,9 @@ export function usePdfExport() {
         if (!viewerEl) throw new Error("Elemento do visualizador não encontrado");
 
         const { generatePdfFromElement } = await import("@/services/pdfGenerator");
-        const pdfBytes = await generatePdfFromElement(viewerEl, defaultName);
+        const pdfBytes = await generatePdfFromElement(viewerEl, defaultName, {
+          edited: isEdited,
+        });
 
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
@@ -201,7 +211,7 @@ export function usePdfExport() {
     } finally {
       setPrinting(false);
     }
-  }, [currentDocument, downloadDir]);
+  }, [currentDocument, isEdited]);
 
   return { exportPdf, exporting, printPdf, printing, exportNotice };
 }
