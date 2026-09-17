@@ -44,7 +44,7 @@ export function GenericXmlViewer({ xml }: Props) {
   }, [xml]);
 
   return (
-    <div className="w-full overflow-auto">
+    <div className="generic-xml-content w-full overflow-auto">
       <pre className="text-[11px] leading-relaxed font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all select-all">
         {formattedXml}
       </pre>

@@ -1,4 +1,6 @@
 import { useDocumentStore } from "@/store/documentStore";
+import { useViewerStore } from "@/store/viewerStore";
+import { ZoomControls } from "./ZoomControls";
 import { DANFEViewer } from "./DANFEViewer";
 import { AdditionalItemsPanel } from "./AdditionalItemsPanel";
 import { DACTeViewer } from "./DACTeViewer";
@@ -10,7 +12,7 @@ import { parseXml } from "@/services/xmlParser";
 import { isTauriRuntime } from "@/utils/runtime";
 import { AlertTriangle, Copy, Check, Download, Loader2, FileCode, Pen, Save } from "lucide-react";
 import { getDocumentMeta } from "@/utils/documentMeta";
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 function formatXml(raw: string): string {
   try {
@@ -144,6 +146,125 @@ export function DocumentViewer() {
   const [downloadNotice, setDownloadNotice] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [saveNotice, setSaveNotice] = useState("");
+  const zoom = useViewerStore((s) => s.zoom);
+  const zoomIn = useViewerStore((s) => s.zoomIn);
+  const zoomOut = useViewerStore((s) => s.zoomOut);
+  const resetZoom = useViewerStore((s) => s.resetZoom);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector("[data-block-global-shortcuts]")) {
+        return;
+      }
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === "-") {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === "0") {
+        e.preventDefault();
+        resetZoom();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [zoomIn, zoomOut, resetZoom]);
+
+  useEffect(() => {
+    // Ctrl+scroll em qualquer ponto do app controla o zoom da nota.
+    // Sem isso, o scroll com Ctrl sobre o header/barra lateral cai no zoom
+    // nativo do navegador, que amplia a página inteira (header junto).
+    const handleWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (
+        target?.closest(
+          "[data-block-global-shortcuts], input, textarea, select, [contenteditable]",
+        )
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        useViewerStore.getState().zoomIn();
+      } else if (e.deltaY > 0) {
+        useViewerStore.getState().zoomOut();
+      }
+    };
+    document.addEventListener("wheel", handleWheel, { passive: false });
+    return () => document.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // The zoom is a visual-only `transform: scale()` (magnifier: no reflow).
+  // Reserve the scaled size on a spacer in NORMAL layout so scrolling never
+  // depends on transformed visual overflow: the spacer box coincides exactly
+  // with the scaled output and is always fully reachable via scroll.
+  useEffect(() => {
+    const spacer = spacerRef.current;
+    if (!spacer) return;
+    const target = spacer.firstElementChild as HTMLElement | null;
+    const parent = spacer.parentElement;
+    if (!target || !parent) return;
+    let raf = 0;
+    const update = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const z = useViewerStore.getState().zoom;
+        // Natural (100%) width: available width capped by the viewer root's
+        // own max-width (e.g. 210mm for fiscal notes, none for generic XML).
+        const maxWidth = getComputedStyle(target).maxWidth;
+        const available = parent.clientWidth;
+        const naturalW =
+          maxWidth === "none"
+            ? available
+            : Math.min(available, parseFloat(maxWidth));
+        if (!Number.isFinite(naturalW) || naturalW <= 0) return;
+        spacer.style.width = `${Math.ceil(naturalW * z)}px`;
+        // The viewer root width is counter-scaled via CSS
+        // (width: calc(100% / --doc-zoom)), so after the width above lands,
+        // offsetHeight is the natural height at the correct width.
+        spacer.style.height = `${Math.ceil(target.offsetHeight * z)}px`;
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(target);
+    ro.observe(parent);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [zoom, doc]);
+
+  // Keep the toolbar pinned to the viewport horizontally: with the note
+  // zoomed wider than the screen, a plain in-flow bar would scroll away
+  // sideways (vertical pinning is already handled by `sticky top-0`).
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+    const scroller = toolbar.closest("main");
+    if (!scroller) return;
+    let raf = 0;
+    const sync = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        toolbar.style.transform =
+          scroller.scrollLeft > 0
+            ? `translateX(${scroller.scrollLeft}px)`
+            : "";
+      });
+    };
+    sync();
+    scroller.addEventListener("scroll", sync, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      scroller.removeEventListener("scroll", sync);
+    };
+  }, [zoom]);
 
   if (loading) {
     return (
@@ -328,7 +449,7 @@ export function DocumentViewer() {
         />
       )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-700 no-print">
+      <div ref={toolbarRef} className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 pt-3 pb-2 md:-mx-4 md:-mt-4 md:px-4 md:pt-4 dark:border-gray-700 dark:bg-gray-800 no-print">
         <div className="flex min-w-0 items-center gap-2">
           <div className="text-gray-600 dark:text-gray-300">
             <DocumentIcon size={16} />
@@ -393,6 +514,10 @@ export function DocumentViewer() {
             Salvar original
           </button>
         )}
+
+        <div className="ml-auto flex items-center no-print">
+          <ZoomControls />
+        </div>
       </div>
 
       {isEdited && (
@@ -401,8 +526,14 @@ export function DocumentViewer() {
         </div>
       )}
 
-      <div id="document-viewer-content" className="relative">
-        {viewer}
+      <div
+        id="document-viewer-content"
+        className="relative"
+        style={{ "--doc-zoom": String(zoom) } as CSSProperties}
+      >
+        <div ref={spacerRef} className="doc-zoom-spacer mx-auto mt-4 mb-4">
+          {viewer}
+        </div>
         {isEdited && <EditedDocumentWatermark />}
       </div>
 

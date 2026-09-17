@@ -70,6 +70,19 @@ export async function generatePdfFromElement(
   clone.style.margin = "0";
   clone.style.boxShadow = "none";
   clone.style.fontFamily = "'Times New Roman', Times, serif";
+  // Ignore the on-screen zoom level: PDF export is always at 100%.
+  clone.style.setProperty("--doc-zoom", "1");
+  clone
+    .querySelectorAll<HTMLElement>(".pdf-only, .generic-xml-content")
+    .forEach((el) => {
+      el.style.transform = "none";
+    });
+  clone
+    .querySelectorAll<HTMLElement>(".doc-zoom-spacer")
+    .forEach((el) => {
+      el.style.height = "auto";
+      el.style.width = "auto";
+    });
 
   removeDarkClasses(clone);
   forceWhiteBackgrounds(clone);

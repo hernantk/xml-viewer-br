@@ -93,6 +93,30 @@
   page-break-inside: avoid;
 }
 
+/* Document zoom (screen only). --doc-zoom is set on #document-viewer-content.
+   `transform: scale()` is purely visual (like a magnifier): it never
+   reflows the note, so columns, line breaks and page breaks stay identical
+   at any zoom level. Only the visual .pdf-only pages are scaled, so the
+   off-screen pagination measurement surfaces stay at 100%.
+   Origin is top-left so scaled content only overflows to the right/bottom
+   and remains fully reachable via scroll. */
+#document-viewer-content .pdf-only,
+#document-viewer-content .generic-xml-content {
+  transform: scale(var(--doc-zoom, 1));
+  transform-origin: top left;
+}
+
+/* The spacer reserves the SCALED size in normal layout (see DocumentViewer),
+   so scrolling never depends on transformed visual overflow: the scaled box
+   is a plain block, always fully reachable. The viewer root is re-anchored
+   to the spacer origin with its width counter-scaled, so visual output
+   coincides exactly with the spacer box. */
+#document-viewer-content .doc-zoom-spacer > * {
+  width: calc(100% / var(--doc-zoom, 1));
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .edited-document-watermark {
   position: absolute;
   inset: 0;
@@ -166,9 +190,27 @@
   }
 
   #document-viewer-content {
+    --doc-zoom: 1 !important;
     break-inside: auto;
     width: 100% !important;
     font-family: 'Times New Roman', Times, serif !important;
+  }
+
+  #document-viewer-content .pdf-only,
+  #document-viewer-content .generic-xml-content {
+    transform: none !important;
+  }
+
+  #document-viewer-content .doc-zoom-spacer {
+    height: auto !important;
+    width: auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  #document-viewer-content .doc-zoom-spacer > * {
+    width: auto !important;
+    margin: 0 auto !important;
   }
 
   .danfe-page {
