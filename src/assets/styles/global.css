@@ -99,7 +99,15 @@
    at any zoom level. Only the visual .pdf-only pages are scaled, so the
    off-screen pagination measurement surfaces stay at 100%.
    Origin is top-left so scaled content only overflows to the right/bottom
-   and remains fully reachable via scroll. */
+   and remains fully reachable via scroll.
+   The white page background lives on the SCALED .pdf-only element (not only
+   on the unscaled viewer root): otherwise, when zoomed in, the scaled
+   content would overflow the root's layout box and the page background
+   would end mid-content, drawing a visible vertical/horizontal seam
+   against the gray canvas behind it. */
+#document-viewer-content .pdf-only {
+  background-color: #fff;
+}
 #document-viewer-content .pdf-only,
 #document-viewer-content .generic-xml-content {
   transform: scale(var(--doc-zoom, 1));

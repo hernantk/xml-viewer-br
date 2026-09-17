@@ -22,6 +22,7 @@ interface DocumentState {
   maxRecentFiles: number;
   downloadDir: string;
   isEdited: boolean;
+  groupByEmitente: boolean;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
   setDocument: (
@@ -37,6 +38,7 @@ interface DocumentState {
   setError: (error: string | null) => void;
   setMaxRecentFiles: (max: number) => void;
   setDownloadDir: (dir: string) => void;
+  setGroupByEmitente: (enabled: boolean) => void;
   initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
   togglePin: (fileId: string) => void;
@@ -51,6 +53,19 @@ const MAX_RECENT_FILES_KEY = "xmlviewer-max-recent";
 const DOWNLOAD_DIR_KEY = "xmlviewer-download-dir";
 const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
+const GROUP_BY_EMITENTE_KEY = "xmlviewer-group-by-emitente";
+
+function getGroupByEmitente(): boolean {
+  try {
+    const saved = localStorage.getItem(GROUP_BY_EMITENTE_KEY);
+    if (saved === null) return true;
+    if (saved === "0" || saved === "false") return false;
+    return true;
+  } catch {
+    /* ignore */
+  }
+  return true;
+}
 
 function getMaxRecentFiles(): number {
   try {
@@ -398,6 +413,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   maxRecentFiles: getMaxRecentFiles(),
   downloadDir: getDownloadDir(),
   isEdited: false,
+  groupByEmitente: getGroupByEmitente(),
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
@@ -533,6 +549,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setDownloadDir: (dir: string) => {
     localStorage.setItem(DOWNLOAD_DIR_KEY, dir);
     set({ downloadDir: dir });
+    void persistToFile();
+  },
+
+  setGroupByEmitente: (enabled: boolean) => {
+    try {
+      localStorage.setItem(GROUP_BY_EMITENTE_KEY, enabled ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    set({ groupByEmitente: enabled });
     void persistToFile();
   },
 

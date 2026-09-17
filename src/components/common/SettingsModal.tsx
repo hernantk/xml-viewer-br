@@ -13,6 +13,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const setMaxRecentFiles = useDocumentStore((s) => s.setMaxRecentFiles);
   const downloadDir = useDocumentStore((s) => s.downloadDir);
   const setDownloadDir = useDocumentStore((s) => s.setDownloadDir);
+  const groupByEmitente = useDocumentStore((s) => s.groupByEmitente);
+  const setGroupByEmitente = useDocumentStore((s) => s.setGroupByEmitente);
   const [inputValue, setInputValue] = useState(String(maxRecentFiles));
   const [downloadDirValue, setDownloadDirValue] = useState(downloadDir);
   const [showWarning, setShowWarning] = useState(false);
@@ -104,6 +106,26 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         </div>
 
         <div className="p-4 space-y-4">
+          <div>
+            <label className="flex cursor-pointer items-start justify-between gap-3">
+              <span>
+                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Agrupar por empresa emitente
+                </span>
+                <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                  Agrupa as notas por emitente na barra lateral, ordenadas pelo
+                  último acesso. Padrão: ativado.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={groupByEmitente}
+                onChange={(e) => setGroupByEmitente(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-blue-600"
+              />
+            </label>
+          </div>
+
           <div>
             <label
               htmlFor="maxRecentFiles"

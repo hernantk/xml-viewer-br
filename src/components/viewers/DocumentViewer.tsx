@@ -13,6 +13,7 @@ import { isTauriRuntime } from "@/utils/runtime";
 import { AlertTriangle, Copy, Check, Download, Loader2, FileCode, Pen, Save } from "lucide-react";
 import { getDocumentMeta } from "@/utils/documentMeta";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRightButtonPan } from "@/hooks/useRightButtonPan";
 
 function formatXml(raw: string): string {
   try {
@@ -152,6 +153,9 @@ export function DocumentViewer() {
   const resetZoom = useViewerStore((s) => s.resetZoom);
   const spacerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const zoomAreaRef = useRef<HTMLDivElement>(null);
+  // Right-button drag pans the zoom area like the middle (scroll) button.
+  useRightButtonPan(zoomAreaRef);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -528,6 +532,7 @@ export function DocumentViewer() {
 
       <div
         id="document-viewer-content"
+        ref={zoomAreaRef}
         className="relative"
         style={{ "--doc-zoom": String(zoom) } as CSSProperties}
       >

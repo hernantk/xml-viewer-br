@@ -1,13 +1,28 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Clock, FileDown, Pin, Printer, Search, Trash2 } from "lucide-react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import {
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  FileDown,
+  Pin,
+  Printer,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useRecentFilePdfExport } from "@/hooks/useRecentFilePdfExport";
 import { BatchRenderSurface } from "@/components/viewers/BatchRenderSurface";
 import appLogo from "@/assets/branding/app-logo.svg";
 import { getDocumentMeta } from "@/utils/documentMeta";
-import type { DocumentType } from "@/types/common";
+import type { DocumentType, RecentFileEntry } from "@/types/common";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { isTauriRuntime } from "@/utils/runtime";
+import {
+  formatPartialDoc,
+  getEmitenteTooltip,
+  groupByEmitente,
+} from "@/utils/emitenteGrouping";
 
 function formatTimeSince(lastOpenedAt: number, referenceNow = Date.now()): string {
   if (!lastOpenedAt) return "agora";
@@ -35,6 +50,9 @@ export function Sidebar() {
   const removeRecentFile = useDocumentStore((s) => s.removeRecentFile);
   const togglePin = useDocumentStore((s) => s.togglePin);
   const currentFilePath = useDocumentStore((s) => s.currentFilePath);
+  const groupByEmitenteEnabled = useDocumentStore((s) => s.groupByEmitente);
+  const setGroupByEmitente = useDocumentStore((s) => s.setGroupByEmitente);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const {
     exportRecentPdf,
     exporting,
@@ -162,6 +180,75 @@ export function Sidebar() {
     overscan: 10,
   });
 
+  const groupedFiles = useMemo(
+    () => (groupByEmitenteEnabled ? groupByEmitente(filteredRecentFiles) : []),
+    [filteredRecentFiles, groupByEmitenteEnabled],
+  );
+
+  const toggleGroupCollapsed = useCallback((key: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const renderRecentItem = useCallback(
+    (recentFile: RecentFileEntry) => {
+      const meta = recentFile.documentType
+        ? getDocumentMeta(recentFile.documentType)
+        : null;
+      const ItemIcon = meta?.icon;
+
+      return (
+        <button
+          onClick={() => loadFile(recentFile.id)}
+          onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
+          className={`w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
+            recentFile.id === currentFilePath
+              ? "bg-gray-200 dark:bg-gray-700"
+              : ""
+          }`}
+          title={recentFile.label}
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="text-gray-500 dark:text-gray-400">
+                {ItemIcon ? (
+                  <ItemIcon size={13} className="shrink-0" />
+                ) : (
+                  <Search size={13} className="shrink-0" />
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {recentFile.label}
+                </span>
+              </span>
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePin(recentFile.id);
+              }}
+              className={`shrink-0 p-0.5 rounded transition ${
+                recentFile.pinned
+                  ? "text-blue-500 hover:text-blue-600"
+                  : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
+              }`}
+              title={recentFile.pinned ? "Desafixar" : "Fixar"}
+            >
+              <Pin size={12} />
+            </button>
+            <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
+              {formatTimeSince(
+                recentFile.lastOpenedAt,
+                recentFile.id === currentFilePath ? Date.now() : now,
+              )}
+            </span>
+          </span>
+        </button>
+      );
+    },
+    [currentFilePath, handleContextMenu, loadFile, now, togglePin],
+  );
+
   return (
     <aside className="flex w-60 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 no-print">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -183,7 +270,23 @@ export function Sidebar() {
       <div className="px-3 pt-2">
         <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase text-gray-500 dark:text-gray-400">
           <Clock size={14} />
-          Arquivos Recentes
+          <span className="flex-1">Arquivos Recentes</span>
+          <button
+            onClick={() => setGroupByEmitente(!groupByEmitenteEnabled)}
+            aria-pressed={groupByEmitenteEnabled}
+            title={
+              groupByEmitenteEnabled
+                ? "Desativar agrupamento por empresa emitente"
+                : "Agrupar por empresa emitente"
+            }
+            className={`shrink-0 rounded p-1 transition ${
+              groupByEmitenteEnabled
+                ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            }`}
+          >
+            <Building2 size={14} />
+          </button>
         </div>
 
         {recentFiles.length > 0 && (
@@ -232,16 +335,70 @@ export function Sidebar() {
           <p className="text-sm text-gray-400 dark:text-gray-500 italic">
             Nenhum arquivo encontrado para esse filtro
           </p>
+        ) : groupByEmitenteEnabled ? (
+          <div className="space-y-2">
+            {groupedFiles.map((group) => {
+              const collapsed = collapsedGroups[group.key] === true;
+              const tooltip = getEmitenteTooltip(group);
+              const partialDoc = group.cnpjEmitente
+                ? formatPartialDoc(group.cnpjEmitente)
+                : null;
+              return (
+                <section key={group.key} aria-label={tooltip}>
+                  <button
+                    onClick={() => toggleGroupCollapsed(group.key)}
+                    aria-expanded={!collapsed}
+                    title={tooltip}
+                    className="w-full rounded-md bg-gray-50 px-2 py-1.5 text-left transition hover:bg-gray-100 dark:bg-gray-800/60 dark:hover:bg-gray-800"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="shrink-0 text-gray-400 dark:text-gray-500">
+                        {collapsed ? (
+                          <ChevronRight size={13} />
+                        ) : (
+                          <ChevronDown size={13} />
+                        )}
+                      </span>
+                      <span className="shrink-0 text-gray-500 dark:text-gray-400">
+                        <Building2 size={13} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className="block truncate text-xs font-semibold text-gray-700 dark:text-gray-200"
+                          title={tooltip}
+                        >
+                          {group.nomeEmitente}
+                        </span>
+                        {partialDoc && (
+                          <span className="block truncate text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                            {partialDoc}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        {group.files.length}
+                      </span>
+                    </span>
+                  </button>
+                  {!collapsed && (
+                    <div className="ml-3 mt-0.5 space-y-px border-l border-gray-200 pl-1 dark:border-gray-700">
+                      {group.files.map((recentFile) => (
+                        <div key={recentFile.id}>
+                          {renderRecentItem(recentFile)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         ) : (
           <div
             style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const recentFile = filteredRecentFiles[virtualItem.index];
-              const meta = recentFile.documentType
-                ? getDocumentMeta(recentFile.documentType)
-                : null;
-              const ItemIcon = meta?.icon;
 
               return (
                 <div
@@ -255,53 +412,7 @@ export function Sidebar() {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <button
-                    onClick={() => loadFile(recentFile.id)}
-                    onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
-                    className={`w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                      recentFile.id === currentFilePath
-                        ? "bg-gray-200 dark:bg-gray-700"
-                        : ""
-                    }`}
-                    title={recentFile.label}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {ItemIcon ? (
-                            <ItemIcon size={13} className="shrink-0" />
-                          ) : (
-                            <Search size={13} className="shrink-0" />
-                          )}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-gray-700 dark:text-gray-200">
-                            {recentFile.label}
-                          </span>
-                        </span>
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePin(recentFile.id);
-                        }}
-                        className={`shrink-0 p-0.5 rounded transition ${
-                          recentFile.pinned
-                            ? "text-blue-500 hover:text-blue-600"
-                            : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
-                        }`}
-                        title={recentFile.pinned ? "Desafixar" : "Fixar"}
-                      >
-                        <Pin size={12} />
-                      </button>
-                      <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                        {formatTimeSince(
-                          recentFile.lastOpenedAt,
-                          recentFile.id === currentFilePath ? Date.now() : now,
-                        )}
-                      </span>
-                    </span>
-                  </button>
+                  {renderRecentItem(recentFile)}
                 </div>
               );
             })}
