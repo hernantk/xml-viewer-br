@@ -89,4 +89,80 @@ describe("parseXml", () => {
     const incompleteNfe = `<NFe><infNFe><emit /></infNFe></NFe>`;
     expect(() => parseXml(incompleteNfe)).toThrow("Elemento ide não encontrado em infNFe.");
   });
+
+  it("lê múltiplos volumes do transporte", () => {
+    const xml = `
+    <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+      <NFe><infNFe Id="NFe1" versao="4.00">
+        <ide><nNF>1</nNF><serie>1</serie></ide>
+        <emit><CNPJ>12345678000190</CNPJ><xNome>E</xNome><enderEmit /></emit>
+        <det nItem="1"><prod><cProd>1</cProd><xProd>P</xProd></prod><imposto /></det>
+        <total><ICMSTot><vNF>10.00</vNF></ICMSTot></total>
+        <transp><modFrete>1</modFrete>
+          <vol><qVol>2</qVol><esp>CAIXA</esp><pesoB>10.00</pesoB><pesoL>9.00</pesoL></vol>
+          <vol><qVol>3</qVol><esp>CAIXA</esp><pesoB>15.00</pesoB><pesoL>13.50</pesoL></vol>
+        </transp>
+      </infNFe></NFe>
+    </nfeProc>`;
+    const doc = parseXml(xml);
+    expect(doc.documentType).toBe("nfe");
+    const vol = doc.nfe?.infNFe.transp.vol;
+    expect(vol).toHaveLength(2);
+    expect(vol?.[0]?.qVol).toBe("2");
+    expect(vol?.[1]?.qVol).toBe("3");
+  });
+
+  it("lê ICMS desonerado no item e no total", () => {
+    const xml = `
+    <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+      <NFe><infNFe Id="NFe1" versao="4.00">
+        <ide><nNF>1</nNF><serie>1</serie></ide>
+        <emit><CNPJ>12345678000190</CNPJ><xNome>E</xNome><enderEmit /></emit>
+        <det nItem="1"><prod><cProd>1</cProd><xProd>P</xProd></prod>
+          <imposto><ICMS><ICMS20><orig>0</orig><CST>20</CST><vICMSDeson>5.00</vICMSDeson><motDesICMS>3</motDesICMS></ICMS20></ICMS></imposto></det>
+        <total><ICMSTot><vNF>10.00</vNF><vICMSDeson>5.00</vICMSDeson></ICMSTot></total>
+        <transp><modFrete>9</modFrete></transp>
+      </infNFe></NFe>
+    </nfeProc>`;
+    const doc = parseXml(xml);
+    expect(doc.nfe?.infNFe.det[0]?.imposto.ICMS?.vICMSDeson).toBe("5.00");
+    expect(doc.nfe?.infNFe.det[0]?.imposto.ICMS?.motDesICMS).toBe("3");
+    expect(doc.nfe?.infNFe.total.ICMSTot.vICMSDeson).toBe("5.00");
+  });
+
+  it("lê IBS/CBS no item e nos totais", () => {
+    const xml = `
+    <nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+      <NFe><infNFe Id="NFe1" versao="4.00">
+        <ide><nNF>1</nNF><serie>1</serie></ide>
+        <emit><CNPJ>12345678000190</CNPJ><xNome>E</xNome><enderEmit /></emit>
+        <det nItem="1"><prod><cProd>1</cProd><xProd>P</xProd></prod>
+          <imposto><IBSCBS><CST>000</CST><cClassTrib>000001</cClassTrib>
+            <gIBSCBS><vBC>1000.00</vBC>
+              <gIBSUF><pIBSUF>0.10</pIBSUF><vIBSUF>1.00</vIBSUF></gIBSUF>
+              <gIBSMun><pIBSMun>0.00</pIBSMun><vIBSMun>0.00</vIBSMun></gIBSMun>
+              <vIBS>1.00</vIBS>
+              <gCBS><pCBS>0.90</pCBS><vCBS>9.00</vCBS></gCBS>
+            </gIBSCBS></IBSCBS></imposto></det>
+        <total><ICMSTot><vNF>1010.00</vNF></ICMSTot>
+          <IBSCBSTot><vBCIBSCBS>1000.00</vBCIBSCBS>
+            <gIBS><gIBSUF><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSUF>1.00</vIBSUF></gIBSUF>
+              <gIBSMun><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSMun>0.00</vIBSMun></gIBSMun>
+              <vIBS>1.00</vIBS></gIBS>
+            <gCBS><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vCBS>9.00</vCBS></gCBS>
+          </IBSCBSTot></total>
+        <transp><modFrete>9</modFrete></transp>
+      </infNFe></NFe>
+    </nfeProc>`;
+    const doc = parseXml(xml);
+    const ibs = doc.nfe?.infNFe.det[0]?.imposto.IBSCBS;
+    expect(ibs?.CST).toBe("000");
+    expect(ibs?.cClassTrib).toBe("000001");
+    expect(ibs?.vBC).toBe("1000.00");
+    expect(ibs?.vIBSUF).toBe("1.00");
+    expect(ibs?.vCBS).toBe("9.00");
+    expect(doc.nfe?.infNFe.total.IBSCBSTot?.vBCIBSCBS).toBe("1000.00");
+    expect(doc.nfe?.infNFe.total.IBSCBSTot?.gIBS?.gIBSUF?.vIBSUF).toBe("1.00");
+    expect(doc.nfe?.infNFe.total.IBSCBSTot?.gCBS?.vCBS).toBe("9.00");
+  });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import JsBarcode from "jsbarcode";
-import type { Nfe } from "@/types/nfe";
+import type { Nfe, Vol } from "@/types/nfe";
+import { useDocumentStore } from "@/store/documentStore";
 import {
   formatAccessKey,
   formatCEP,
@@ -99,6 +100,42 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+function summarizeVolumes(vol?: Vol[]) {
+  if (!vol || vol.length === 0) return null;
+  const toNum = (v?: string) => {
+    const n = parseFloat(v || "");
+    return Number.isFinite(n) ? n : 0;
+  };
+  const hasQVol = vol.some((v) => v.qVol !== undefined && v.qVol !== "");
+  const totalQVol = vol.reduce((sum, v) => sum + toNum(v.qVol), 0);
+  const totalPesoL = vol.reduce((sum, v) => sum + toNum(v.pesoL), 0);
+  const totalPesoB = vol.reduce((sum, v) => sum + toNum(v.pesoB), 0);
+  const hasPesoL = vol.some((v) => v.pesoL !== undefined && v.pesoL !== "");
+  const hasPesoB = vol.some((v) => v.pesoB !== undefined && v.pesoB !== "");
+  const joinUnique = (vals: (string | undefined)[]) => {
+    const uniq = [...new Set(vals.filter((v): v is string => !!v && v.trim() !== ""))];
+    return uniq.join(", ");
+  };
+  return {
+    qVol: hasQVol ? String(totalQVol) : "",
+    qVolRaw: hasQVol ? totalQVol : null,
+    esp: joinUnique(vol.map((v) => v.esp)),
+    marca: joinUnique(vol.map((v) => v.marca)),
+    nVol: joinUnique(vol.map((v) => v.nVol)),
+    pesoL: hasPesoL ? String(totalPesoL) : "",
+    pesoB: hasPesoB ? String(totalPesoB) : "",
+    count: vol.length,
+  };
+}
+
+function formatQVol(value: string): string {
+  if (!value) return "";
+  const num = parseFloat(value);
+  if (!Number.isFinite(num)) return value;
+  // qVol costuma ser inteiro, mas preservamos decimais quando existirem
+  return formatQuantity(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +392,7 @@ export function DANFEViewer({ nfe }: Props) {
   const { infNFe, protNFe } = nfe;
   const { ide, emit, dest, det, total, transp, cobr, pag, infAdic } = infNFe;
   const accessKey = protNFe?.infProt.chNFe || infNFe.id.replace("NFe", "");
+  const showIbsCbs = useDocumentStore((s) => s.showIbsCbs);
 
   const measureFirstPageRef = useRef<HTMLDivElement>(null);
   const measureContinuationHeaderRef = useRef<HTMLDivElement>(null);
@@ -456,7 +494,7 @@ export function DANFEViewer({ nfe }: Props) {
       </div>
       <div className="grid grid-cols-4">
         <FieldSmallRight label="V. Imp. Importação" value={formatCurrency(total.ICMSTot.vII)} />
-        <FieldSmallRight label="V. ICMS UF Remet." value="" />
+        <FieldSmallRight label="V. ICMS Desonerado" value={formatCurrency(total.ICMSTot.vICMSDeson)} />
         <FieldSmallRight label="V. FCP UF Dest." value={formatCurrency(total.ICMSTot.vFCP)} />
         <FieldSmallRight label="Valor do PIS" value={formatCurrency(total.ICMSTot.vPIS)} />
       </div>
@@ -504,36 +542,47 @@ export function DANFEViewer({ nfe }: Props) {
       </div>
       <div className="grid grid-cols-[1fr_auto_auto_auto]">
         <Field label="CNPJ / CPF" value={formatCNPJorCPF(transp.transporta?.CNPJ || transp.transporta?.CPF)} />
-        {transp.vol && transp.vol.length > 0 && (
-          <>
-            <Field label="Quantidade" value={transp.vol[0]?.qVol || ""} className="min-w-[80px]" />
-            <Field label="Espécie" value={transp.vol[0]?.esp || ""} className="min-w-[80px]" />
-            <Field label="Marca" value={transp.vol[0]?.marca || ""} className="min-w-[80px]" />
-          </>
-        )}
-        {!transp.vol && (
-          <>
-            <Field label="Quantidade" value="" />
-            <Field label="Espécie" value="" />
-            <Field label="Marca" value="" />
-          </>
-        )}
+        {(() => {
+          const summary = summarizeVolumes(transp.vol);
+          if (!summary) {
+            return (
+              <>
+                <Field label="Quantidade" value="" />
+                <Field label="Espécie" value="" />
+                <Field label="Marca" value="" />
+              </>
+            );
+          }
+          return (
+            <>
+              <Field label="Quantidade" value={summary.qVol ? formatQVol(summary.qVol) : ""} className="min-w-[80px]" />
+              <Field label="Espécie" value={summary.esp} className="min-w-[80px]" />
+              <Field label="Marca" value={summary.marca} className="min-w-[80px]" />
+            </>
+          );
+        })()}
       </div>
-      {(transp.vol && transp.vol.length > 0) ? (
-        <div className="grid grid-cols-4">
-          <Field label="Numeração" value={transp.vol[0]?.nVol || ""} />
-          <FieldRight label="Peso Bruto" value={transp.vol[0]?.pesoB ? formatQuantity(transp.vol[0].pesoB) : ""} />
-          <FieldRight label="Peso Líquido" value={transp.vol[0]?.pesoL ? formatQuantity(transp.vol[0].pesoL) : ""} />
-          <div className="rounded border border-black px-[2pt] py-[1pt]" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-4">
-          <Field label="Numeração" value="" />
-          <FieldRight label="Peso Bruto" value="" />
-          <FieldRight label="Peso Líquido" value="" />
-          <div className="rounded border border-black px-[2pt] py-[1pt]" />
-        </div>
-      )}
+      {(() => {
+        const summary = summarizeVolumes(transp.vol);
+        if (!summary) {
+          return (
+            <div className="grid grid-cols-4">
+              <Field label="Numeração" value="" />
+              <FieldRight label="Peso Bruto" value="" />
+              <FieldRight label="Peso Líquido" value="" />
+              <div className="rounded border border-black px-[2pt] py-[1pt]" />
+            </div>
+          );
+        }
+        return (
+          <div className="grid grid-cols-4">
+            <Field label="Numeração" value={summary.nVol} />
+            <FieldRight label="Peso Bruto" value={summary.pesoB ? formatQuantity(summary.pesoB) : ""} />
+            <FieldRight label="Peso Líquido" value={summary.pesoL ? formatQuantity(summary.pesoL) : ""} />
+            <div className="rounded border border-black px-[2pt] py-[1pt]" />
+          </div>
+        );
+      })()}
     </div>
   );
 
@@ -593,12 +642,97 @@ export function DANFEViewer({ nfe }: Props) {
     </div>
   );
 
+  // ---- IBS / CBS (Reforma Tributária) ----
+  const ibsItems = det.filter((d) => d.imposto.IBSCBS);
+  const sumIbsField = (pick: (b: NonNullable<(typeof det)[number]["imposto"]["IBSCBS"]>) => string | undefined) => {
+    const sum = ibsItems.reduce((acc, d) => {
+      const raw = d.imposto.IBSCBS ? pick(d.imposto.IBSCBS) : undefined;
+      const n = parseFloat(raw || "");
+      return acc + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    return sum;
+  };
+  const hasIbsData =
+    !!total.IBSCBSTot ||
+    !!total.ISTot ||
+    !!total.vNFTot ||
+    ibsItems.length > 0 ||
+    det.some((d) => d.imposto.IS);
+  const totIBSUF =
+    total.IBSCBSTot?.gIBS?.gIBSUF?.vIBSUF ?? (sumIbsField((b) => b.vIBSUF) > 0 || ibsItems.length > 0 ? String(sumIbsField((b) => b.vIBSUF)) : undefined);
+  const totIBSMun =
+    total.IBSCBSTot?.gIBS?.gIBSMun?.vIBSMun ?? (sumIbsField((b) => b.vIBSMun) > 0 || ibsItems.length > 0 ? String(sumIbsField((b) => b.vIBSMun)) : undefined);
+  const totIBS =
+    total.IBSCBSTot?.gIBS?.vIBS ?? (sumIbsField((b) => b.vIBS) > 0 || ibsItems.length > 0 ? String(sumIbsField((b) => b.vIBS)) : undefined);
+  const totCBS =
+    total.IBSCBSTot?.gCBS?.vCBS ?? (sumIbsField((b) => b.vCBS) > 0 || ibsItems.length > 0 ? String(sumIbsField((b) => b.vCBS)) : undefined);
+  const totBCIBS = total.IBSCBSTot?.vBCIBSCBS ?? (sumIbsField((b) => b.vBC) > 0 ? String(sumIbsField((b) => b.vBC)) : undefined);
+
+  const ibsCbsSection =
+    showIbsCbs && hasIbsData ? (
+      <div>
+        <SectionTitle>IBS / CBS – Reforma Tributária</SectionTitle>
+        <div className="grid grid-cols-4">
+          <FieldSmallRight label="Base IBS / CBS" value={totBCIBS ? formatCurrency(totBCIBS) : ""} />
+          <FieldSmallRight label="IBS UF" value={totIBSUF ? formatCurrency(totIBSUF) : ""} />
+          <FieldSmallRight label="IBS Município" value={totIBSMun ? formatCurrency(totIBSMun) : ""} />
+          <FieldSmallRight label="Total IBS" value={totIBS ? formatCurrency(totIBS) : ""} />
+        </div>
+        <div className="grid grid-cols-4">
+          <FieldSmallRight label="Total CBS" value={totCBS ? formatCurrency(totCBS) : ""} />
+          <FieldSmallRight label="Total IS" value={total.ISTot?.vIS ? formatCurrency(total.ISTot.vIS) : ""} />
+          <FieldSmallRight label="V. Total NF c/ IBS/CBS/IS" value={total.vNFTot ? formatCurrency(total.vNFTot) : ""} />
+          <div className="rounded border border-black px-[2pt] py-[1pt]" />
+        </div>
+        {ibsItems.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[6pt] border-collapse">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Item</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">CST</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">cClassTrib</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">BC IBS/CBS</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">IBS UF</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">IBS Mun</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">IBS</th>
+                  <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">CBS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ibsItems.map((d) => {
+                  const b = d.imposto.IBSCBS!;
+                  return (
+                    <tr key={d.nItem}>
+                      <td className="border border-black px-[1pt] py-[1pt] text-center">{d.nItem}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-center">{b.CST || ""}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-center">{b.cClassTrib || ""}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-right">{b.vBC ? formatCurrency(b.vBC) : ""}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-right">{b.vIBSUF ? formatCurrency(b.vIBSUF) : ""}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-right">{b.vIBSMun ? formatCurrency(b.vIBSMun) : ""}</td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-right">
+                        {b.vIBS ? formatCurrency(b.vIBS) : b.vTotIBSMonoItem ? formatCurrency(b.vTotIBSMonoItem) : ""}
+                      </td>
+                      <td className="border border-black px-[1pt] py-[1pt] text-right">
+                        {b.vCBS ? formatCurrency(b.vCBS) : b.vTotCBSMonoItem ? formatCurrency(b.vTotCBSMonoItem) : ""}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    ) : null;
+
   const topSections = (
     <>
       {recipientSection}
       {faturaSection}
       {pagamentoSection}
       {impostoSection}
+      {ibsCbsSection}
       {transportadoraSection}
     </>
   );
@@ -646,7 +780,7 @@ export function DANFEViewer({ nfe }: Props) {
 
     setPageChunks(chunkProducts(rowHeights, firstPageAvailable, continuationPageAvailable));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [det, emit, ide, protNFe, accessKey, dest, total, transp, cobr, pag, infAdic]);
+  }, [det, emit, ide, protNFe, accessKey, dest, total, transp, cobr, pag, infAdic, showIbsCbs]);
 
   useLayoutEffect(() => {
     recalculate();

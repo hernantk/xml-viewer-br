@@ -23,6 +23,7 @@ interface DocumentState {
   downloadDir: string;
   isEdited: boolean;
   groupByEmitente: boolean;
+  showIbsCbs: boolean;
 
   loadFile: (fileId: string, xmlContent?: string) => Promise<void>;
   setDocument: (
@@ -39,6 +40,7 @@ interface DocumentState {
   setMaxRecentFiles: (max: number) => void;
   setDownloadDir: (dir: string) => void;
   setGroupByEmitente: (enabled: boolean) => void;
+  setShowIbsCbs: (enabled: boolean) => void;
   initializeDownloadDir: () => Promise<void>;
   removeRecentFile: (fileId: string) => void;
   togglePin: (fileId: string) => void;
@@ -54,6 +56,7 @@ const DOWNLOAD_DIR_KEY = "xmlviewer-download-dir";
 const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
 const GROUP_BY_EMITENTE_KEY = "xmlviewer-group-by-emitente";
+const SHOW_IBS_CBS_KEY = "xmlviewer-show-ibs-cbs";
 
 function getGroupByEmitente(): boolean {
   try {
@@ -65,6 +68,18 @@ function getGroupByEmitente(): boolean {
     /* ignore */
   }
   return true;
+}
+
+function getShowIbsCbs(): boolean {
+  try {
+    const saved = localStorage.getItem(SHOW_IBS_CBS_KEY);
+    if (saved === null) return false;
+    if (saved === "0" || saved === "false") return false;
+    return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
 }
 
 function getMaxRecentFiles(): number {
@@ -414,6 +429,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   downloadDir: getDownloadDir(),
   isEdited: false,
   groupByEmitente: getGroupByEmitente(),
+  showIbsCbs: getShowIbsCbs(),
 
   loadFile: async (fileId: string, xmlContent?: string) => {
     set({ loading: true, error: null });
@@ -559,6 +575,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       /* ignore */
     }
     set({ groupByEmitente: enabled });
+    void persistToFile();
+  },
+
+  setShowIbsCbs: (enabled: boolean) => {
+    try {
+      localStorage.setItem(SHOW_IBS_CBS_KEY, enabled ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    set({ showIbsCbs: enabled });
     void persistToFile();
   },
 

@@ -113,6 +113,8 @@ export interface Imposto {
   IPI?: IpiGroup;
   PIS?: PisGroup;
   COFINS?: CofinsGroup;
+  IBSCBS?: IbsCbsItem;
+  IS?: IsItem;
 }
 
 export interface IcmsGroup {
@@ -125,6 +127,33 @@ export interface IcmsGroup {
   vBCST?: string;
   pICMSST?: string;
   vICMSST?: string;
+  vICMSDeson?: string;
+  motDesICMS?: string;
+  pRedBC?: string;
+}
+
+export interface IbsCbsItem {
+  CST?: string;
+  cClassTrib?: string;
+  indDoacao?: string;
+  vBC?: string;
+  pIBSUF?: string;
+  vIBSUF?: string;
+  pIBSMun?: string;
+  vIBSMun?: string;
+  vIBS?: string;
+  pCBS?: string;
+  vCBS?: string;
+  vTotIBSMonoItem?: string;
+  vTotCBSMonoItem?: string;
+}
+
+export interface IsItem {
+  CST?: string;
+  cClassTrib?: string;
+  vBC?: string;
+  pIS?: string;
+  vIS?: string;
 }
 
 export interface IpiGroup {
@@ -150,6 +179,39 @@ export interface CofinsGroup {
 
 export interface Total {
   ICMSTot: ICMSTot;
+  IBSCBSTot?: IbsCbsTot;
+  ISTot?: IsTot;
+  vNFTot?: string;
+}
+
+export interface IbsCbsTot {
+  vBCIBSCBS?: string;
+  gIBS?: {
+    gIBSUF?: {
+      vDif?: string;
+      vDevTrib?: string;
+      vIBSUF?: string;
+    };
+    gIBSMun?: {
+      vDif?: string;
+      vDevTrib?: string;
+      vIBSMun?: string;
+    };
+    vIBS?: string;
+    vCredPres?: string;
+    vCredPresCondSus?: string;
+  };
+  gCBS?: {
+    vDif?: string;
+    vDevTrib?: string;
+    vCBS?: string;
+    vCredPres?: string;
+    vCredPresCondSus?: string;
+  };
+}
+
+export interface IsTot {
+  vIS?: string;
 }
 
 export interface ICMSTot {

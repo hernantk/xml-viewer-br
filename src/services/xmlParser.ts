@@ -1,5 +1,5 @@
 import type { ParsedDocument, DocumentType } from "@/types/common";
-import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Rastro, Med, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe } from "@/types/nfe";
+import type { Nfe, InfNFe, Ide, Emit, Dest, Det, Prod, Rastro, Med, Imposto, IcmsGroup, IpiGroup, PisGroup, CofinsGroup, Total, ICMSTot, Transp, Transporta, VeicTransp, Vol, Cobr, Fatura, Duplicata, Pag, InfAdic, ProtNFe, IbsCbsItem, IsItem, IbsCbsTot, IsTot } from "@/types/nfe";
 import type { Cte, InfCte, IdeCte, EmitCte, PartyCte, VPrest, ImpCte, IcmsCte, InfCTeNorm, InfCarga, InfDoc, InfModal, ComplCte, ProtCTe } from "@/types/cte";
 import type { CompNfse, InfNfse, ValoresNfse, PrestadorServico, TomadorServico, EnderecoNfse, Contato, OrgaoGerador, DeclaracaoPrestacaoServico, Servico, ValoresServico, SpedCompNfse } from "@/types/nfse";
 
@@ -274,10 +274,21 @@ function parseMed(el: Element): Med | undefined {
 }
 
 function parseImposto(el: Element): Imposto {
-  const icmsEl = getEl(el, "ICMS");
-  const ipiEl = getEl(el, "IPI");
-  const pisEl = getEl(el, "PIS");
-  const cofinsEl = getEl(el, "COFINS");
+  // NB: getEl usa getElementsByTagName (recursivo). Para grupos de imposto
+  // precisamos do filho direto, senão um <vBC> do IBS seria confundido etc.
+  // Como os grupos são filhos diretos de <imposto>, filtramos por parent.
+  const directChild = (tag: string): Element | null => {
+    for (let i = 0; i < el.children.length; i++) {
+      if (el.children[i].tagName === tag) return el.children[i] as Element;
+    }
+    return getEl(el, tag);
+  };
+  const icmsEl = directChild("ICMS");
+  const ipiEl = directChild("IPI");
+  const pisEl = directChild("PIS");
+  const cofinsEl = directChild("COFINS");
+  const ibsCbsEl = directChild("IBSCBS");
+  const isEl = directChild("IS");
 
   return {
     vTotTrib: getTxt(el, "vTotTrib") || undefined,
@@ -285,6 +296,8 @@ function parseImposto(el: Element): Imposto {
     IPI: ipiEl ? parseIpi(ipiEl) : undefined,
     PIS: pisEl ? parsePis(pisEl) : undefined,
     COFINS: cofinsEl ? parseCofins(cofinsEl) : undefined,
+    IBSCBS: ibsCbsEl ? parseIbsCbs(ibsCbsEl) : undefined,
+    IS: isEl ? parseIsItem(isEl) : undefined,
   };
 }
 
@@ -304,6 +317,78 @@ function parseIcms(el: Element): IcmsGroup {
     vBCST: getTxt(variant, "vBCST") || undefined,
     pICMSST: getTxt(variant, "pICMSST") || undefined,
     vICMSST: getTxt(variant, "vICMSST") || undefined,
+    vICMSDeson: getTxt(variant, "vICMSDeson") || undefined,
+    motDesICMS: getTxt(variant, "motDesICMS") || undefined,
+    pRedBC: getTxt(variant, "pRedBC") || undefined,
+  };
+}
+
+function firstChildByTag(parent: Element, tag: string): Element | null {
+  for (let i = 0; i < parent.children.length; i++) {
+    if (parent.children[i].tagName === tag) return parent.children[i] as Element;
+  }
+  return null;
+}
+
+function parseIbsCbs(el: Element): IbsCbsItem {
+  const result: IbsCbsItem = {
+    CST: getTxt(el, "CST") || undefined,
+    cClassTrib: getTxt(el, "cClassTrib") || undefined,
+    indDoacao: getTxt(el, "indDoacao") || undefined,
+  };
+
+  const gIBSCBS = firstChildByTag(el, "gIBSCBS");
+  if (gIBSCBS) {
+    result.vBC = getTxt(gIBSCBS, "vBC") || undefined;
+    // gIBSUF / gIBSMun podem trazer diferimento, devolução, redução etc.
+    // Para exibição capturamos alíquota e valor.
+    const gIBSUF = firstChildByTag(gIBSCBS, "gIBSUF") || getEl(gIBSCBS, "gIBSUF");
+    if (gIBSUF) {
+      result.pIBSUF = getTxt(gIBSUF, "pIBSUF") || getTxt(gIBSUF, "pAliqEfet") || undefined;
+      result.vIBSUF = getTxt(gIBSUF, "vIBSUF") || undefined;
+    }
+    const gIBSMun = firstChildByTag(gIBSCBS, "gIBSMun") || getEl(gIBSCBS, "gIBSMun");
+    if (gIBSMun) {
+      result.pIBSMun = getTxt(gIBSMun, "pIBSMun") || getTxt(gIBSMun, "pAliqEfet") || undefined;
+      result.vIBSMun = getTxt(gIBSMun, "vIBSMun") || undefined;
+    }
+    result.vIBS = getTxt(gIBSCBS, "vIBS") || undefined;
+    const gCBS = firstChildByTag(gIBSCBS, "gCBS") || getEl(gIBSCBS, "gCBS");
+    if (gCBS) {
+      result.pCBS = getTxt(gCBS, "pCBS") || getTxt(gCBS, "pAliqEfet") || undefined;
+      result.vCBS = getTxt(gCBS, "vCBS") || undefined;
+    }
+    // Fallbacks caso o layout traga os valores sem os subgrupos
+    if (!result.vIBSUF) result.vIBSUF = getTxt(gIBSCBS, "vIBSUF") || undefined;
+    if (!result.vIBSMun) result.vIBSMun = getTxt(gIBSCBS, "vIBSMun") || undefined;
+    if (!result.vCBS) result.vCBS = getTxt(gIBSCBS, "vCBS") || undefined;
+  }
+
+  const gMono = firstChildByTag(el, "gIBSCBSMono");
+  if (gMono) {
+    result.vTotIBSMonoItem =
+      getTxt(gMono, "vTotIBSMonoItem") || getTxt(gMono, "vIBSMono") || getTxt(gMono, "vIBSMonoRet") || undefined;
+    result.vTotCBSMonoItem =
+      getTxt(gMono, "vTotCBSMonoItem") || getTxt(gMono, "vCBSMono") || getTxt(gMono, "vCBSMonoRet") || undefined;
+    if (!result.vBC) result.vBC = getTxt(gMono, "qBCMono") || getTxt(gMono, "qBCMonoRet") || undefined;
+  }
+
+  const gTransf = firstChildByTag(el, "gTransfCred");
+  if (gTransf) {
+    if (!result.vIBS) result.vIBS = getTxt(gTransf, "vIBS") || undefined;
+    if (!result.vCBS) result.vCBS = getTxt(gTransf, "vCBS") || undefined;
+  }
+
+  return result;
+}
+
+function parseIsItem(el: Element): IsItem {
+  return {
+    CST: getTxt(el, "CST") || getTxt(el, "CSTIS") || undefined,
+    cClassTrib: getTxt(el, "cClassTrib") || getTxt(el, "cClassTribIS") || undefined,
+    vBC: getTxt(el, "vBC") || getTxt(el, "vBCIS") || undefined,
+    pIS: getTxt(el, "pIS") || undefined,
+    vIS: getTxt(el, "vIS") || undefined,
   };
 }
 
@@ -343,8 +428,69 @@ function parseCofins(el: Element): CofinsGroup {
 
 function parseTotal(el: Element): Total {
   const icmsTotEl = requireEl(el, "ICMSTot", "total");
+  const ibsCbsTotEl = firstChildByTag(el, "IBSCBSTot") || getEl(el, "IBSCBSTot");
+  const isTotEl = firstChildByTag(el, "ISTot") || getEl(el, "ISTot");
   return {
     ICMSTot: parseICMSTot(icmsTotEl),
+    IBSCBSTot: ibsCbsTotEl ? parseIbsCbsTot(ibsCbsTotEl) : undefined,
+    ISTot: isTotEl ? parseIsTot(isTotEl) : undefined,
+    vNFTot: getTxt(el, "vNFTot") || undefined,
+  };
+}
+
+function parseIbsCbsTot(el: Element): IbsCbsTot {
+  const gIBSEl = firstChildByTag(el, "gIBS") || getEl(el, "gIBS");
+  const gCBSEl = firstChildByTag(el, "gCBS") || getEl(el, "gCBS");
+
+  let gIBS: IbsCbsTot["gIBS"];
+  if (gIBSEl) {
+    const gIBSUFEl = firstChildByTag(gIBSEl, "gIBSUF") || getEl(gIBSEl, "gIBSUF");
+    // Totais usam gIBSUFTot / gIBSMunTot em algumas versões
+    const gIBSUFTot = firstChildByTag(gIBSEl, "gIBSUFTot") || getEl(gIBSEl, "gIBSUFTot") || gIBSUFEl;
+    const gIBSMunEl = firstChildByTag(gIBSEl, "gIBSMun") || getEl(gIBSEl, "gIBSMun");
+    const gIBSMunTot = firstChildByTag(gIBSEl, "gIBSMunTot") || getEl(gIBSEl, "gIBSMunTot") || gIBSMunEl;
+    gIBS = {
+      gIBSUF: gIBSUFTot
+        ? {
+            vDif: getTxt(gIBSUFTot, "vDif") || undefined,
+            vDevTrib: getTxt(gIBSUFTot, "vDevTrib") || undefined,
+            vIBSUF: getTxt(gIBSUFTot, "vIBSUF") || undefined,
+          }
+        : undefined,
+      gIBSMun: gIBSMunTot
+        ? {
+            vDif: getTxt(gIBSMunTot, "vDif") || undefined,
+            vDevTrib: getTxt(gIBSMunTot, "vDevTrib") || undefined,
+            vIBSMun: getTxt(gIBSMunTot, "vIBSMun") || undefined,
+          }
+        : undefined,
+      vIBS: getTxt(gIBSEl, "vIBS") || undefined,
+      vCredPres: getTxt(gIBSEl, "vCredPres") || undefined,
+      vCredPresCondSus: getTxt(gIBSEl, "vCredPresCondSus") || undefined,
+    };
+  }
+
+  let gCBS: IbsCbsTot["gCBS"];
+  if (gCBSEl) {
+    gCBS = {
+      vDif: getTxt(gCBSEl, "vDif") || undefined,
+      vDevTrib: getTxt(gCBSEl, "vDevTrib") || undefined,
+      vCBS: getTxt(gCBSEl, "vCBS") || undefined,
+      vCredPres: getTxt(gCBSEl, "vCredPres") || undefined,
+      vCredPresCondSus: getTxt(gCBSEl, "vCredPresCondSus") || undefined,
+    };
+  }
+
+  return {
+    vBCIBSCBS: getTxt(el, "vBCIBSCBS") || undefined,
+    gIBS,
+    gCBS,
+  };
+}
+
+function parseIsTot(el: Element): IsTot {
+  return {
+    vIS: getTxt(el, "vIS") || undefined,
   };
 }
 
@@ -375,7 +521,9 @@ function parseICMSTot(el: Element): ICMSTot {
 
 function parseTransp(el: Element): Transp {
   const transportaEl = getEl(el, "transporta");
-  const volEls = getElAll(el, "vol");
+  // <vol> são filhos diretos de <transp>. Usar getElementsByTagName puro
+  // pode capturar <vol> aninhados em outros contextos; filtramos pelo pai.
+  const volEls = getElAll(el, "vol").filter((v) => v.parentElement === el);
   const veicTranspEl = getEl(el, "veicTransp");
   return {
     modFrete: getTxt(el, "modFrete"),

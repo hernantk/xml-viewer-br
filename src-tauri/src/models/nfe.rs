@@ -141,6 +141,10 @@ pub struct Imposto {
     pub pis: Option<PisGroup>,
     #[serde(rename = "COFINS", skip_serializing_if = "Option::is_none")]
     pub cofins: Option<CofinsGroup>,
+    #[serde(rename = "IBSCBS", skip_serializing_if = "Option::is_none")]
+    pub ibscbs: Option<IbsCbsItem>,
+    #[serde(rename = "IS", skip_serializing_if = "Option::is_none")]
+    pub is: Option<IsItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +167,48 @@ pub struct IcmsGroup {
     pub p_icmsst: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub v_icmsst: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_icms_deson: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mot_des_icms: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p_red_bc: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IbsCbsItem {
+    #[serde(rename = "CST", skip_serializing_if = "Option::is_none")]
+    pub cst: Option<String>,
+    #[serde(rename = "cClassTrib", skip_serializing_if = "Option::is_none")]
+    pub c_class_trib: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_bc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p_ibsuf: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_ibsuf: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p_ibsmun: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_ibsmun: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_ibs: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p_cbs: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_cbs: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IsItem {
+    #[serde(rename = "CST", skip_serializing_if = "Option::is_none")]
+    pub cst: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_bc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_is: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,6 +255,65 @@ pub struct CofinsGroup {
 pub struct Total {
     #[serde(rename = "ICMSTot")]
     pub icms_tot: ICMSTot,
+    #[serde(rename = "IBSCBSTot", skip_serializing_if = "Option::is_none")]
+    pub ibscbs_tot: Option<IbsCbsTot>,
+    #[serde(rename = "ISTot", skip_serializing_if = "Option::is_none")]
+    pub is_tot: Option<IsTot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_nf_tot: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IbsCbsTot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_bcibscbs: Option<String>,
+    #[serde(rename = "gIBS", skip_serializing_if = "Option::is_none")]
+    pub g_ibs: Option<GIbsTot>,
+    #[serde(rename = "gCBS", skip_serializing_if = "Option::is_none")]
+    pub g_cbs: Option<GCbsTot>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GIbsTot {
+    #[serde(rename = "gIBSUF", skip_serializing_if = "Option::is_none")]
+    pub g_ibsuf: Option<GIbsUfMunTot>,
+    #[serde(rename = "gIBSMun", skip_serializing_if = "Option::is_none")]
+    pub g_ibsmun: Option<GIbsUfMunTot>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_ibs: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GIbsUfMunTot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_dif: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_dev_trib: Option<String>,
+    #[serde(rename = "vIBSUF", skip_serializing_if = "Option::is_none")]
+    pub v_ibsuf: Option<String>,
+    #[serde(rename = "vIBSMun", skip_serializing_if = "Option::is_none")]
+    pub v_ibsmun: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GCbsTot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_dif: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_dev_trib: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_cbs: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IsTot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_is: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

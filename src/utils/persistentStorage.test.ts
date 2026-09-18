@@ -106,6 +106,7 @@ describe("persistentStorage", () => {
       "xmlviewer-max-recent",
       "xmlviewer-download-dir",
       "xmlviewer-group-by-emitente",
+      "xmlviewer-show-ibs-cbs",
       "xmlviewer-selected-cert",
     ];
     keys.forEach((key) => localStorage.setItem(key, "valor"));

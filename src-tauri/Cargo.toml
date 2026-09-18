@@ -1,6 +1,6 @@
 [package]
 name = "xml-viewer-br"
-version = "1.6.2"
+version = "1.6.3"
 description = "Visualizador de XML fiscal brasileiro (NF-e, CT-e, NFS-e)"
 authors = ["you"]
 license = "Apache-2.0"

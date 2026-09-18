@@ -163,6 +163,8 @@ fn parse_imposto(el: &roxmltree::Node) -> Imposto {
     let ipi_el = find_child(el, "IPI");
     let pis_el = find_child(el, "PIS");
     let cofins_el = find_child(el, "COFINS");
+    let ibscbs_el = find_child(el, "IBSCBS");
+    let is_el = find_child(el, "IS");
 
     Imposto {
         v_tot_trib: get_text_opt(el, "vTotTrib"),
@@ -178,6 +180,9 @@ fn parse_imposto(el: &roxmltree::Node) -> Imposto {
                 v_bcst: get_text_opt(&variant, "vBCST"),
                 p_icmsst: get_text_opt(&variant, "pICMSST"),
                 v_icmsst: get_text_opt(&variant, "vICMSST"),
+                v_icms_deson: get_text_opt(&variant, "vICMSDeson"),
+                mot_des_icms: get_text_opt(&variant, "motDesICMS"),
+                p_red_bc: get_text_opt(&variant, "pRedBC"),
             })
         }),
         ipi: ipi_el.map(|i| {
@@ -207,11 +212,64 @@ fn parse_imposto(el: &roxmltree::Node) -> Imposto {
                 v_cofins: get_text_opt(&variant, "vCOFINS"),
             })
         }),
+        ibscbs: ibscbs_el.map(|b| parse_ibscbs(&b)),
+        is: is_el.map(|i| IsItem {
+            cst: get_text_opt(&i, "CST").or_else(|| get_text_opt(&i, "CSTIS")),
+            v_bc: get_text_opt(&i, "vBC").or_else(|| get_text_opt(&i, "vBCIS")),
+            v_is: get_text_opt(&i, "vIS"),
+        }),
+    }
+}
+
+fn descendant_text(node: &roxmltree::Node, name: &str) -> Option<String> {
+    node.descendants()
+        .find(|n| n.has_tag_name(name))
+        .and_then(|n| n.text())
+        .map(|s| s.to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn parse_ibscbs(el: &roxmltree::Node) -> IbsCbsItem {
+    let g_ibscbs = find_child(el, "gIBSCBS");
+    let (p_ibsuf, v_ibsuf, p_ibsmun, v_ibsmun, v_ibs, p_cbs, v_cbs, v_bc) = match g_ibscbs {
+        Some(g) => {
+            let g_ibsuf = find_child(&g, "gIBSUF");
+            let g_ibsmun = find_child(&g, "gIBSMun");
+            let g_cbs = find_child(&g, "gCBS");
+            (
+                g_ibsuf.as_ref().and_then(|n| get_text_opt(n, "pIBSUF")),
+                g_ibsuf.as_ref().and_then(|n| get_text_opt(n, "vIBSUF")),
+                g_ibsmun.as_ref().and_then(|n| get_text_opt(n, "pIBSMun")),
+                g_ibsmun.as_ref().and_then(|n| get_text_opt(n, "vIBSMun")),
+                get_text_opt(&g, "vIBS"),
+                g_cbs.as_ref().and_then(|n| get_text_opt(n, "pCBS")),
+                g_cbs.as_ref().and_then(|n| get_text_opt(n, "vCBS")),
+                get_text_opt(&g, "vBC"),
+            )
+        }
+        None => (None, None, None, None, None, None, None, None),
+    };
+    // Fallback para monofásico / transferência via busca descendente
+    let v_ibs = v_ibs.or_else(|| descendant_text(el, "vIBS"));
+    let v_cbs = v_cbs.or_else(|| descendant_text(el, "vCBS"));
+    IbsCbsItem {
+        cst: get_text_opt(el, "CST"),
+        c_class_trib: get_text_opt(el, "cClassTrib"),
+        v_bc: v_bc.or_else(|| descendant_text(el, "vBC")),
+        p_ibsuf,
+        v_ibsuf: v_ibsuf.or_else(|| descendant_text(el, "vIBSUF")),
+        p_ibsmun,
+        v_ibsmun: v_ibsmun.or_else(|| descendant_text(el, "vIBSMun")),
+        v_ibs,
+        p_cbs,
+        v_cbs,
     }
 }
 
 fn parse_total(el: &roxmltree::Node) -> Total {
     let icms_tot = find_child(el, "ICMSTot").unwrap();
+    let ibscbs_tot_el = find_child(el, "IBSCBSTot");
+    let is_tot_el = find_child(el, "ISTot");
     Total {
         icms_tot: ICMSTot {
             v_bc: get_text(&icms_tot, "vBC"),
@@ -235,6 +293,42 @@ fn parse_total(el: &roxmltree::Node) -> Total {
             v_nf: get_text(&icms_tot, "vNF"),
             v_tot_trib: get_text_opt(&icms_tot, "vTotTrib"),
         },
+        ibscbs_tot: ibscbs_tot_el.map(|t| {
+            let g_ibs = find_child(&t, "gIBS");
+            let g_cbs = find_child(&t, "gCBS");
+            IbsCbsTot {
+                v_bcibscbs: get_text_opt(&t, "vBCIBSCBS"),
+                g_ibs: g_ibs.map(|g| {
+                    // Totais podem vir como gIBSUF/gIBSMun ou gIBSUFTot/gIBSMunTot
+                    let uf = find_child(&g, "gIBSUF").or_else(|| find_child(&g, "gIBSUFTot"));
+                    let mun = find_child(&g, "gIBSMun").or_else(|| find_child(&g, "gIBSMunTot"));
+                    GIbsTot {
+                        g_ibsuf: uf.map(|u| GIbsUfMunTot {
+                            v_dif: get_text_opt(&u, "vDif"),
+                            v_dev_trib: get_text_opt(&u, "vDevTrib"),
+                            v_ibsuf: get_text_opt(&u, "vIBSUF"),
+                            v_ibsmun: None,
+                        }),
+                        g_ibsmun: mun.map(|m| GIbsUfMunTot {
+                            v_dif: get_text_opt(&m, "vDif"),
+                            v_dev_trib: get_text_opt(&m, "vDevTrib"),
+                            v_ibsuf: None,
+                            v_ibsmun: get_text_opt(&m, "vIBSMun"),
+                        }),
+                        v_ibs: get_text_opt(&g, "vIBS"),
+                    }
+                }),
+                g_cbs: g_cbs.map(|g| GCbsTot {
+                    v_dif: get_text_opt(&g, "vDif"),
+                    v_dev_trib: get_text_opt(&g, "vDevTrib"),
+                    v_cbs: get_text_opt(&g, "vCBS"),
+                }),
+            }
+        }),
+        is_tot: is_tot_el.map(|t| IsTot {
+            v_is: get_text_opt(&t, "vIS"),
+        }),
+        v_nf_tot: get_text_opt(el, "vNFTot"),
     }
 }
 
