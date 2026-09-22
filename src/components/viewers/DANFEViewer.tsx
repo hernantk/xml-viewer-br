@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import JsBarcode from "jsbarcode";
-import type { Nfe, Vol } from "@/types/nfe";
+import type { ICMSTot, Nfe, Vol } from "@/types/nfe";
 import { useDocumentStore } from "@/store/documentStore";
 import {
   formatAccessKey,
@@ -32,13 +32,23 @@ interface Props {
 // ---------------------------------------------------------------------------
 // Reusable field components  (sizes match the reference Times New Roman PDF)
 // ---------------------------------------------------------------------------
-function Field({ label, value, className = "" }: { label: string; value: string; className?: string }) {
+function Field({
+  label,
+  value,
+  className = "",
+  valueClassName = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+  valueClassName?: string;
+}) {
   return (
     <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10pt] font-bold leading-[1.1] break-words">
+      <div className={`text-[10pt] font-bold leading-[1.1] break-words ${valueClassName}`}>
         {value || "\u00A0"}
       </div>
     </div>
@@ -102,6 +112,45 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function IcmsTaxCalculation({ total }: { total: ICMSTot }) {
+  return (
+    <div>
+      <SectionTitle>Cálculo do Imposto</SectionTitle>
+      <div className="grid grid-cols-5">
+        <FieldSmallRight label="Base de Cálc. do ICMS" value={formatCurrency(total.vBC)} />
+        <FieldSmallRight label="Valor do ICMS" value={formatCurrency(total.vICMS)} />
+        <FieldSmallRight label="V. ICMS Desonerado" value={formatCurrency(total.vICMSDeson)} />
+        <FieldSmallRight label="Base de Cálc. ICMS S.T." value={formatCurrency(total.vBCST)} />
+        <FieldSmallRight label="Valor do ICMS Subst." value={formatCurrency(total.vST)} />
+      </div>
+      <div className="grid grid-cols-4">
+        <FieldSmallRight label="V. Imp. Importação" value={formatCurrency(total.vII)} />
+        <FieldSmallRight label="V. FCP UF Dest." value={formatCurrency(total.vFCP)} />
+        <FieldSmallRight label="Valor do PIS" value={formatCurrency(total.vPIS)} />
+        <FieldSmallRight label="V. Total dos Produtos" value={formatCurrency(total.vProd)} />
+      </div>
+      <div className="grid grid-cols-4">
+        <FieldSmallRight label="Valor do Frete" value={formatCurrency(total.vFrete)} />
+        <FieldSmallRight label="Valor do Seguro" value={formatCurrency(total.vSeg)} />
+        <FieldSmallRight label="Desconto" value={formatCurrency(total.vDesc)} />
+        <FieldSmallRight label="Outras Despesas" value={formatCurrency(total.vOutro)} />
+      </div>
+      <div className="grid grid-cols-4">
+        <FieldSmallRight label="Valor Total IPI" value={formatCurrency(total.vIPI)} />
+        <FieldSmallRight label="V. ICMS UF Dest." value="" />
+        <FieldSmallRight label="V. Tot. Trib." value={total.vTotTrib ? formatCurrency(total.vTotTrib) : ""} />
+        <FieldSmallRight label="Valor da COFINS" value={formatCurrency(total.vCOFINS)} />
+      </div>
+      <div className="grid grid-cols-4">
+        <FieldSmallRight label="V. Total da Nota" value={formatCurrency(total.vNF)} className="font-bold" />
+        <div className="rounded border border-black px-[2pt] py-[1pt]" />
+        <div className="rounded border border-black px-[2pt] py-[1pt]" />
+        <div className="rounded border border-black px-[2pt] py-[1pt]" />
+      </div>
+    </div>
+  );
+}
+
 function summarizeVolumes(vol?: Vol[]) {
   if (!vol || vol.length === 0) return null;
   const toNum = (v?: string) => {
@@ -136,6 +185,21 @@ function formatQVol(value: string): string {
   if (!Number.isFinite(num)) return value;
   // qVol costuma ser inteiro, mas preservamos decimais quando existirem
   return formatQuantity(value);
+}
+
+export function TransportVolumesRow({ volumes }: { volumes?: Vol[] }) {
+  const summary = summarizeVolumes(volumes);
+
+  return (
+    <div className="grid grid-cols-[0.8fr_0.8fr_0.8fr_1.1fr_0.9fr_0.9fr]">
+      <Field label="Quantidade" value={summary?.qVol ? formatQVol(summary.qVol) : ""} />
+      <Field label="Espécie" value={summary?.esp || ""} />
+      <Field label="Marca" value={summary?.marca || ""} />
+      <Field label="Numeração" value={summary?.nVol || ""} />
+      <FieldRight label="Peso Bruto" value={summary?.pesoB ? formatQuantity(summary.pesoB) : ""} />
+      <FieldRight label="Peso Líquido" value={summary?.pesoL ? formatQuantity(summary.pesoL) : ""} />
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -482,57 +546,34 @@ export function DANFEViewer({ nfe }: Props) {
     </div>
   );
 
-  // ---- Cálculo do Imposto (4-column grid) ----
-  const impostoSection = (
-    <div>
-      <SectionTitle>Cálculo do Imposto</SectionTitle>
-      <div className="grid grid-cols-4">
-        <FieldSmallRight label="Base de Cálc. do ICMS" value={formatCurrency(total.ICMSTot.vBC)} />
-        <FieldSmallRight label="Valor do ICMS" value={formatCurrency(total.ICMSTot.vICMS)} />
-        <FieldSmallRight label="Base de Cálc. ICMS S.T." value={formatCurrency(total.ICMSTot.vBCST)} />
-        <FieldSmallRight label="Valor do ICMS Subst." value={formatCurrency(total.ICMSTot.vST)} />
-      </div>
-      <div className="grid grid-cols-4">
-        <FieldSmallRight label="V. Imp. Importação" value={formatCurrency(total.ICMSTot.vII)} />
-        <FieldSmallRight label="V. ICMS Desonerado" value={formatCurrency(total.ICMSTot.vICMSDeson)} />
-        <FieldSmallRight label="V. FCP UF Dest." value={formatCurrency(total.ICMSTot.vFCP)} />
-        <FieldSmallRight label="Valor do PIS" value={formatCurrency(total.ICMSTot.vPIS)} />
-      </div>
-      <div className="grid grid-cols-4">
-        <FieldSmallRight label="V. Total dos Produtos" value={formatCurrency(total.ICMSTot.vProd)} />
-        <FieldSmallRight label="Valor do Frete" value={formatCurrency(total.ICMSTot.vFrete)} />
-        <FieldSmallRight label="Valor do Seguro" value={formatCurrency(total.ICMSTot.vSeg)} />
-        <FieldSmallRight label="Desconto" value={formatCurrency(total.ICMSTot.vDesc)} />
-      </div>
-      <div className="grid grid-cols-4">
-        <FieldSmallRight label="Outras Despesas" value={formatCurrency(total.ICMSTot.vOutro)} />
-        <FieldSmallRight label="Valor Total IPI" value={formatCurrency(total.ICMSTot.vIPI)} />
-        <FieldSmallRight label="V. ICMS UF Dest." value="" />
-        <FieldSmallRight label="V. Tot. Trib." value={total.ICMSTot.vTotTrib ? formatCurrency(total.ICMSTot.vTotTrib) : ""} />
-      </div>
-      <div className="grid grid-cols-4">
-        <FieldSmallRight label="Valor da COFINS" value={formatCurrency(total.ICMSTot.vCOFINS)} />
-        <FieldSmallRight label="V. Total da Nota" value={formatCurrency(total.ICMSTot.vNF)} className="font-bold" />
-        <div className="rounded border border-black px-[2pt] py-[1pt]" />
-        <div className="rounded border border-black px-[2pt] py-[1pt]" />
-      </div>
-    </div>
-  );
+  const impostoSection = <IcmsTaxCalculation total={total.ICMSTot} />;
 
   // ---- Transportador ----
   const transportadoraSection = (
     <div>
       <SectionTitle>Transportador / Volumes Transportados</SectionTitle>
-      <div className="grid grid-cols-[1fr_auto_auto_auto_auto]">
-        <Field label="Nome / Razão Social" value={transp.transporta?.xNome || ""} />
+      <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1.4fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.3fr)_minmax(0,1fr)]">
+        <Field
+          label="Nome / Razão Social"
+          value={transp.transporta?.xNome || ""}
+          className="min-w-0"
+          valueClassName="!text-[8pt]"
+        />
         <Field
           label="Frete"
           value={MODAL_FRETE[transp.modFrete] || transp.modFrete}
-          className="min-w-[160px]"
+          className="min-w-0"
+          valueClassName="!text-[8pt]"
         />
-        <Field label="Código ANTT" value={transp.veicTransp?.RNTRC || ""} className="min-w-[100px]" />
-        <Field label="Placa do Veículo" value={transp.veicTransp?.placa || ""} className="min-w-[90px]" />
-        <Field label="UF" value={transp.veicTransp?.UF || ""} className="min-w-[40px]" />
+        <Field label="Código ANTT" value={transp.veicTransp?.RNTRC || ""} className="min-w-0" valueClassName="!text-[8pt]" />
+        <Field label="Placa do Veículo" value={transp.veicTransp?.placa || ""} className="min-w-0" valueClassName="!text-[8pt]" />
+        <Field label="UF" value={transp.veicTransp?.UF || ""} className="min-w-0" valueClassName="!text-[8pt]" />
+        <Field
+          label="CNPJ / CPF"
+          value={formatCNPJorCPF(transp.transporta?.CNPJ || transp.transporta?.CPF)}
+          className="min-w-0"
+          valueClassName="!text-[8pt]"
+        />
       </div>
       <div className="grid grid-cols-[1fr_auto_60px_auto]">
         <Field label="Endereço" value={transp.transporta?.xEnder || ""} />
@@ -540,49 +581,7 @@ export function DANFEViewer({ nfe }: Props) {
         <Field label="UF" value={transp.transporta?.UF || ""} />
         <Field label="Inscrição Estadual" value={transp.transporta?.IE || ""} className="min-w-[130px]" />
       </div>
-      <div className="grid grid-cols-[1fr_auto_auto_auto]">
-        <Field label="CNPJ / CPF" value={formatCNPJorCPF(transp.transporta?.CNPJ || transp.transporta?.CPF)} />
-        {(() => {
-          const summary = summarizeVolumes(transp.vol);
-          if (!summary) {
-            return (
-              <>
-                <Field label="Quantidade" value="" />
-                <Field label="Espécie" value="" />
-                <Field label="Marca" value="" />
-              </>
-            );
-          }
-          return (
-            <>
-              <Field label="Quantidade" value={summary.qVol ? formatQVol(summary.qVol) : ""} className="min-w-[80px]" />
-              <Field label="Espécie" value={summary.esp} className="min-w-[80px]" />
-              <Field label="Marca" value={summary.marca} className="min-w-[80px]" />
-            </>
-          );
-        })()}
-      </div>
-      {(() => {
-        const summary = summarizeVolumes(transp.vol);
-        if (!summary) {
-          return (
-            <div className="grid grid-cols-4">
-              <Field label="Numeração" value="" />
-              <FieldRight label="Peso Bruto" value="" />
-              <FieldRight label="Peso Líquido" value="" />
-              <div className="rounded border border-black px-[2pt] py-[1pt]" />
-            </div>
-          );
-        }
-        return (
-          <div className="grid grid-cols-4">
-            <Field label="Numeração" value={summary.nVol} />
-            <FieldRight label="Peso Bruto" value={summary.pesoB ? formatQuantity(summary.pesoB) : ""} />
-            <FieldRight label="Peso Líquido" value={summary.pesoL ? formatQuantity(summary.pesoL) : ""} />
-            <div className="rounded border border-black px-[2pt] py-[1pt]" />
-          </div>
-        );
-      })()}
+      <TransportVolumesRow volumes={transp.vol} />
     </div>
   );
 

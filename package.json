@@ -1,7 +1,7 @@
 {
   "name": "xml-viewer-br",
   "private": true,
-  "version": "1.6.3",
+  "version": "1.6.5",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "preview": "vite preview",
+    "version:set": "node scripts/update-version.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
