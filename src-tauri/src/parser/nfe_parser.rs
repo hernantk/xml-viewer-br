@@ -132,6 +132,7 @@ fn parse_det(el: &roxmltree::Node) -> Det {
         n_item: el.attribute("nItem").unwrap_or("").to_string(),
         prod: parse_prod(&prod_el),
         imposto: parse_imposto(&imposto_el),
+        inf_ad_prod: get_text_opt(el, "infAdProd"),
     }
 }
 
@@ -155,6 +156,24 @@ fn parse_prod(el: &roxmltree::Node) -> Prod {
         v_seg: get_text_opt(el, "vSeg"),
         v_desc: get_text_opt(el, "vDesc"),
         v_outro: get_text_opt(el, "vOutro"),
+        rastro: {
+            let entries: Vec<Rastro> = find_children(el, "rastro")
+                .iter()
+                .map(|r| Rastro {
+                    n_lote: get_text(r, "nLote"),
+                    q_lote: get_text_opt(r, "qLote"),
+                    d_fab: get_text_opt(r, "dFab"),
+                    d_val: get_text_opt(r, "dVal"),
+                    c_agreg: get_text_opt(r, "cAgreg"),
+                })
+                .collect();
+            (!entries.is_empty()).then_some(entries)
+        },
+        med: find_child(el, "med").map(|med| Med {
+            c_prod_anvisa: get_text_opt(&med, "cProdANVISA"),
+            x_motivo_isencao: get_text_opt(&med, "xMotivoIsencao"),
+            v_pmc: get_text_opt(&med, "vPMC"),
+        }),
     }
 }
 

@@ -68,6 +68,7 @@ export interface Det {
   nItem: string;
   prod: Prod;
   imposto: Imposto;
+  infAdProd?: string;
 }
 
 export interface Prod {

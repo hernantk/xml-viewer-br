@@ -97,6 +97,8 @@ pub struct Det {
     pub n_item: String,
     pub prod: Prod,
     pub imposto: Imposto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inf_ad_prod: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,6 +128,37 @@ pub struct Prod {
     pub v_desc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub v_outro: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rastro: Option<Vec<Rastro>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub med: Option<Med>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Rastro {
+    pub n_lote: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub q_lote: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub d_fab: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub d_val: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub c_agreg: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Med {
+    #[serde(rename = "cProdANVISA")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub c_prod_anvisa: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x_motivo_isencao: Option<String>,
+    #[serde(rename = "vPMC")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_pmc: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -223,6 +223,7 @@ function parseDet(el: Element): Det {
     nItem: el.getAttribute("nItem") || "",
     prod: parseProd(prodEl),
     imposto: parseImposto(impostoEl),
+    infAdProd: getTxt(el, "infAdProd") || undefined,
   };
 }
 

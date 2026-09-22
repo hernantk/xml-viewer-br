@@ -44,11 +44,11 @@ function Field({
   valueClassName?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className={`text-[10pt] font-bold leading-[1.1] break-words ${valueClassName}`}>
+      <div data-danfe-field-value className={`text-[10pt] font-bold leading-[1.1] break-words ${valueClassName}`}>
         {value || "\u00A0"}
       </div>
     </div>
@@ -57,11 +57,11 @@ function Field({
 
 function FieldRight({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10pt] font-bold leading-[1.1] text-right">
+      <div data-danfe-field-value className="text-[10pt] font-bold leading-[1.1] text-right">
         {value || "\u00A0"}
       </div>
     </div>
@@ -70,11 +70,11 @@ function FieldRight({ label, value, className = "" }: { label: string; value: st
 
 function FieldSmallRight({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[5pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10pt] font-bold leading-[1.1] text-right">
+      <div data-danfe-field-value className="text-[10pt] font-bold leading-[1.1] text-right">
         {value || "\u00A0"}
       </div>
     </div>
@@ -106,9 +106,17 @@ function Barcode({ value }: { value: string }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-200 px-[2pt] py-[1pt] text-[7pt] font-bold uppercase leading-[1.1] border-b border-black">
-      {children}
+    <div data-danfe-section-title className="bg-gray-200 px-[2pt] py-[1pt] text-[7pt] font-bold uppercase leading-[1.1] border-b border-black">
+      <span data-danfe-section-title-text>{children}</span>
     </div>
+  );
+}
+
+function ProductHeading({ children, align = "center" }: { children: React.ReactNode; align?: "left" | "center" }) {
+  return (
+    <th data-danfe-product-heading className={`border border-black px-[1pt] py-[1pt] font-bold uppercase ${align === "left" ? "text-left" : "text-center"}`}>
+      <span data-danfe-product-heading-text className="block">{children}</span>
+    </th>
   );
 }
 
@@ -187,6 +195,75 @@ function formatQVol(value: string): string {
   return formatQuantity(value);
 }
 
+function formatTraceabilityDate(value?: string): string {
+  if (!value) return "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function removeRepeatedTraceability(additionalInfo: string, product: Nfe["infNFe"]["det"][number]["prod"]): string {
+  let result = additionalInfo.replace(
+    /(?:^|\s*[.;,-]\s*)Part\s*Number\s*:\s*[^.;,]+/gi,
+    "",
+  );
+
+  for (const trace of product.rastro ?? []) {
+    const lot = escapeRegExp(trace.nLote);
+    const expiration = trace.dVal ? escapeRegExp(formatTraceabilityDate(trace.dVal)) : null;
+    const expirationPart = expiration
+      ? `(?:\\s*-?\\s*(?:Dt\\.?\\s*)?(?:Val(?:id(?:ade)?\\.?)?|Venc(?:imento)?\\.?)\\s*[:\\-]\\s*${expiration})?`
+      : "";
+
+    result = result.replace(
+      new RegExp(`(?:\\s*[.;,-]?\\s*)Lote\\s*[:\\-]\\s*${lot}${expirationPart}`, "gi"),
+      "",
+    );
+  }
+
+  return result.replace(/\s{2,}/g, " ").replace(/[\s.;,-]+$/g, "").trim();
+}
+
+export function ProductDescription({
+  product,
+  additionalInfo,
+}: {
+  product: Nfe["infNFe"]["det"][number]["prod"];
+  additionalInfo?: string;
+}) {
+  const barcode = product.cEAN && product.cEAN !== "SEM GTIN" ? product.cEAN : product.cEANTrib !== "SEM GTIN" ? product.cEANTrib : "";
+  const uniqueAdditionalInfo = additionalInfo ? removeRepeatedTraceability(additionalInfo, product) : "";
+
+  return (
+    <>
+      <div>{product.xProd}</div>
+      {product.rastro?.map((trace, index) => (
+        <div key={`${trace.nLote}-${index}`} className="mt-[1pt] text-[5.5pt] leading-[1.1]">
+          Lote-{trace.nLote || "—"}
+          {trace.dFab ? ` Fab-${formatTraceabilityDate(trace.dFab)}` : ""}
+          {trace.dVal ? ` Val-${formatTraceabilityDate(trace.dVal)}` : ""}
+          {trace.qLote ? ` Qtd-${formatQuantity(trace.qLote)}` : ""}
+          {trace.cAgreg ? ` Agreg-${trace.cAgreg}` : ""}
+        </div>
+      ))}
+      {product.med?.cProdANVISA && (
+        <div className="mt-[1pt] text-[5.5pt] leading-[1.1]">R. ANVISA-{product.med.cProdANVISA}</div>
+      )}
+      {product.med?.xMotivoIsencao && (
+        <div className="mt-[1pt] text-[5.5pt] leading-[1.1]">Isenção ANVISA-{product.med.xMotivoIsencao}</div>
+      )}
+      {product.med?.vPMC && (
+        <div className="mt-[1pt] text-[5.5pt] leading-[1.1]">PMC-{formatCurrency(product.med.vPMC)}</div>
+      )}
+      {uniqueAdditionalInfo && <div className="mt-[1pt] text-[5.5pt] leading-[1.1]">{uniqueAdditionalInfo}</div>}
+      {barcode && <div className="mt-[1pt] text-[5.5pt] leading-[1.1]">Cód. Barras: {barcode}</div>}
+    </>
+  );
+}
+
 export function TransportVolumesRow({ volumes }: { volumes?: Vol[] }) {
   const summary = summarizeVolumes(volumes);
 
@@ -262,7 +339,7 @@ function DanfeHeaderBlock({
             Série <span className="font-bold">{ide.serie}</span>
           </div>
           {pageInfo && (
-            <div className="text-[8pt] italic leading-[1.1] mt-[2pt]">
+            <div data-danfe-header-footer className="text-[8pt] italic leading-[1.1] mt-[2pt]">
               Folha {pageInfo.current}/{pageInfo.total}
             </div>
           )}
@@ -284,7 +361,7 @@ function DanfeHeaderBlock({
             www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora
           </div>
           {protNFe && (
-            <div className="text-[8pt] text-center leading-[1.1] mt-[1pt]">
+            <div data-danfe-header-protocol className="text-[8pt] text-center leading-[1.1] mt-[1pt]">
               <div>
                 Protocolo de Autorização:{" "}
                 <span className="font-bold">{protNFe.infProt.nProt}</span>
@@ -298,11 +375,11 @@ function DanfeHeaderBlock({
       {/* Natureza da Operação + Protocolo */}
       <div className="grid grid-cols-[1fr_auto]">
         <Field label="Natureza da Operação" value={ide.natOp} />
-        <div className="rounded border border-black px-[2pt] py-[1pt] min-w-[160px]">
+        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt] min-w-[160px]">
           <div className="text-[6pt] leading-[1.1] uppercase">
             Protocolo de Autorização de Uso
           </div>
-          <div className="text-[8pt] font-bold leading-[1.1]">
+          <div data-danfe-field-value className="text-[8pt] font-bold leading-[1.1]">
             {protNFe ? `${protNFe.infProt.nProt} - ${formatDateTime(protNFe.infProt.dhRecbto)}` : "\u00A0"}
           </div>
         </div>
@@ -341,7 +418,9 @@ function ProductRows({
           }}
         >
           <td className="border border-black px-[1pt] py-[1pt] align-top text-[6pt]">{item.prod.cProd}</td>
-          <td className="border border-black px-[1pt] py-[1pt] align-top text-[6pt]">{item.prod.xProd}</td>
+          <td data-danfe-product-description className="border border-black px-[1pt] py-[1pt] align-top text-[6pt]">
+            <ProductDescription product={item.prod} additionalInfo={item.infAdProd} />
+          </td>
           <td className="border border-black px-[1pt] py-[1pt] text-center align-top text-[6pt]">{item.prod.NCM}</td>
           <td className="border border-black px-[1pt] py-[1pt] text-center align-top text-[6pt]">
             {item.imposto.ICMS?.orig || ""}{item.imposto.ICMS?.CST || item.imposto.ICMS?.CSOSN || ""}
@@ -386,21 +465,21 @@ function ProductsTable({
         <table className="w-full text-[6pt] border-collapse">
           <thead ref={headRef}>
             <tr className="bg-gray-200">
-              <th className="border border-black px-[1pt] py-[1pt] text-left font-bold uppercase">Código<br/>Produto</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-left font-bold uppercase">Descrição do Produto / Serviço</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">NCM/SH</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">O/CST</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">CFOP</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">UN</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Quant</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Valor<br/>Unit</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Valor<br/>Total</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Valor<br/>Desc</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">B.Cálc<br/>ICMS</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Valor<br/>ICMS</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Valor<br/>IPI</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Alíq.<br/>ICMS</th>
-              <th className="border border-black px-[1pt] py-[1pt] text-center font-bold uppercase">Alíq.<br/>IPI</th>
+              <ProductHeading align="left">Código<br/>Produto</ProductHeading>
+              <ProductHeading align="left">Descrição do Produto / Serviço</ProductHeading>
+              <ProductHeading>NCM/SH</ProductHeading>
+              <ProductHeading>O/CST</ProductHeading>
+              <ProductHeading>CFOP</ProductHeading>
+              <ProductHeading>UN</ProductHeading>
+              <ProductHeading>Quant</ProductHeading>
+              <ProductHeading>Valor<br/>Unit</ProductHeading>
+              <ProductHeading>Valor<br/>Total</ProductHeading>
+              <ProductHeading>Valor<br/>Desc</ProductHeading>
+              <ProductHeading>B.Cálc<br/>ICMS</ProductHeading>
+              <ProductHeading>Valor<br/>ICMS</ProductHeading>
+              <ProductHeading>Valor<br/>IPI</ProductHeading>
+              <ProductHeading>Alíq.<br/>ICMS</ProductHeading>
+              <ProductHeading>Alíq.<br/>IPI</ProductHeading>
             </tr>
           </thead>
           <tbody>
@@ -415,34 +494,40 @@ function ProductsTable({
 // ---------------------------------------------------------------------------
 // Pagination logic
 // ---------------------------------------------------------------------------
-function chunkProducts(
+export function chunkProducts(
   rowHeights: number[],
   firstPageAvailable: number,
   nextPageAvailable: number,
+  finalPageReserved = 0,
 ) {
   const chunks: number[][] = [];
-  let currentChunk: number[] = [];
-  let remaining = firstPageAvailable;
+  const safeHeights = rowHeights.map((height) => Math.max(height, 1));
+  let index = 0;
 
-  rowHeights.forEach((height, index) => {
-    const safeHeight = Math.max(height, 1);
-    if (currentChunk.length > 0 && safeHeight > remaining) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      remaining = nextPageAvailable;
+  while (index < safeHeights.length) {
+    const available = chunks.length === 0 ? firstPageAvailable : nextPageAvailable;
+    const remainingHeight = safeHeights.slice(index).reduce((sum, height) => sum + height, 0);
+
+    if (remainingHeight + finalPageReserved <= available) {
+      chunks.push(safeHeights.slice(index).map((_, offset) => index + offset));
+      break;
     }
 
-    currentChunk.push(index);
-    remaining -= safeHeight;
-
-    if (remaining <= 0) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      remaining = nextPageAvailable;
+    const currentChunk: number[] = [];
+    let used = 0;
+    while (index < safeHeights.length) {
+      const height = safeHeights[index];
+      const mustLeaveFinalPage = finalPageReserved > 0 && index === safeHeights.length - 1;
+      if (mustLeaveFinalPage || (currentChunk.length > 0 && used + height > available)) break;
+      currentChunk.push(index);
+      used += height;
+      index += 1;
     }
-  });
 
-  if (currentChunk.length > 0) {
+    if (currentChunk.length === 0) {
+      currentChunk.push(index);
+      index += 1;
+    }
     chunks.push(currentChunk);
   }
 
@@ -530,15 +615,15 @@ export function DANFEViewer({ nfe }: Props) {
     <div>
       <SectionTitle>Pagamento</SectionTitle>
       <div className="grid grid-cols-2">
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">Forma</div>
-          <div className="text-[7pt] font-bold leading-[1.1]">
+          <div data-danfe-field-value className="text-[7pt] font-bold leading-[1.1]">
             {pag.detPag.map((dp) => FORMA_PAGAMENTO[dp.tPag] || dp.tPag).join(", ")}
           </div>
         </div>
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">Valor</div>
-          <div className="text-[7pt] font-bold leading-[1.1]">
+          <div data-danfe-field-value className="text-[7pt] font-bold leading-[1.1]">
             {formatCurrency(pag.detPag.reduce((sum, dp) => sum + parseFloat(dp.vPag || "0"), 0))}
           </div>
         </div>
@@ -625,10 +710,10 @@ export function DANFEViewer({ nfe }: Props) {
       {cobr.dup && cobr.dup.length > 0 && cobr.dup.length <= 20 && (
         <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10">
           {cobr.dup.map((dup) => (
-            <div key={dup.nDup} className="rounded border border-black px-[2pt] py-[1pt] text-[8pt]">
+            <div data-danfe-duplicate key={dup.nDup} className="rounded border border-black px-[2pt] py-[1pt] text-[8pt]">
               <div className="font-bold">Nº {dup.nDup}</div>
               <div>{formatDate(dup.dVenc)}</div>
-              <div className="text-right font-bold">{formatCurrency(dup.vDup)}</div>
+              <div data-danfe-duplicate-value className="text-right font-bold">{formatCurrency(dup.vDup)}</div>
             </div>
           ))}
         </div>
@@ -769,7 +854,7 @@ export function DANFEViewer({ nfe }: Props) {
     const rowHeights = det.map((_, index) => measureRowRefs.current[index]?.getBoundingClientRect().height ?? 0);
 
     const firstPageAvailable = Math.max(
-      pageContentHeight - firstPageStaticHeight - additionalHeight - productsHeadHeight - DANFE_ADDITIONAL_SECTION_SAFETY_PX,
+      pageContentHeight - firstPageStaticHeight - productsHeadHeight,
       40,
     );
     const continuationPageAvailable = Math.max(
@@ -777,7 +862,12 @@ export function DANFEViewer({ nfe }: Props) {
       40,
     );
 
-    setPageChunks(chunkProducts(rowHeights, firstPageAvailable, continuationPageAvailable));
+    setPageChunks(chunkProducts(
+      rowHeights,
+      firstPageAvailable,
+      continuationPageAvailable,
+      additionalHeight + DANFE_ADDITIONAL_SECTION_SAFETY_PX,
+    ));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [det, emit, ide, protNFe, accessKey, dest, total, transp, cobr, pag, infAdic, showIbsCbs]);
 
@@ -821,7 +911,7 @@ export function DANFEViewer({ nfe }: Props) {
             {headerBlockWithPage(1)}
             {topSections}
             {firstPageProducts.length > 0 && <ProductsTable items={firstPageProducts} />}
-            {additionalSection}
+            {continuationProductPages.length === 0 && additionalSection}
           </section>
 
           {continuationProductPages.map((items, index) => {
@@ -838,6 +928,7 @@ export function DANFEViewer({ nfe }: Props) {
                 <section className="danfe-page p-4 break-before-page">
                   {headerBlockWithPage(pageNum)}
                   <ProductsTable items={items} />
+                  {index === continuationProductPages.length - 1 && additionalSection}
                 </section>
               </div>
             );

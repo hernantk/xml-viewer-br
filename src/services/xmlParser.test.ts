@@ -118,8 +118,11 @@ describe("parseXml", () => {
       <NFe><infNFe Id="NFe1" versao="4.00">
         <ide><nNF>1</nNF><serie>1</serie></ide>
         <emit><CNPJ>12345678000190</CNPJ><xNome>E</xNome><enderEmit /></emit>
-        <det nItem="1"><prod><cProd>1</cProd><xProd>P</xProd></prod>
-          <imposto><ICMS><ICMS20><orig>0</orig><CST>20</CST><vICMSDeson>5.00</vICMSDeson><motDesICMS>3</motDesICMS></ICMS20></ICMS></imposto></det>
+        <det nItem="1"><prod><cProd>1</cProd><cEAN>7891234567890</cEAN><xProd>P</xProd>
+          <rastro><nLote>L1</nLote><qLote>2</qLote><dFab>2026-01-02</dFab><dVal>2028-03-04</dVal></rastro>
+          <med><cProdANVISA>123456789</cProdANVISA><vPMC>41.28</vPMC></med></prod>
+          <imposto><ICMS><ICMS20><orig>0</orig><CST>20</CST><vICMSDeson>5.00</vICMSDeson><motDesICMS>3</motDesICMS></ICMS20></ICMS></imposto>
+          <infAdProd>Informação complementar do produto</infAdProd></det>
         <total><ICMSTot><vNF>10.00</vNF><vICMSDeson>5.00</vICMSDeson></ICMSTot></total>
         <transp><modFrete>9</modFrete></transp>
       </infNFe></NFe>
@@ -127,6 +130,9 @@ describe("parseXml", () => {
     const doc = parseXml(xml);
     expect(doc.nfe?.infNFe.det[0]?.imposto.ICMS?.vICMSDeson).toBe("5.00");
     expect(doc.nfe?.infNFe.det[0]?.imposto.ICMS?.motDesICMS).toBe("3");
+    expect(doc.nfe?.infNFe.det[0]?.prod.rastro?.[0]?.nLote).toBe("L1");
+    expect(doc.nfe?.infNFe.det[0]?.prod.med?.cProdANVISA).toBe("123456789");
+    expect(doc.nfe?.infNFe.det[0]?.infAdProd).toBe("Informação complementar do produto");
     expect(doc.nfe?.infNFe.total.ICMSTot.vICMSDeson).toBe("5.00");
   });
 

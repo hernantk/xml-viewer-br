@@ -58,6 +58,13 @@ export async function generatePdfFromElement(
 ): Promise<Uint8Array> {
   const { html2canvas, jsPDF } = await loadDeps();
 
+  // Linux uses this raster fallback. Wait for the final font metrics before
+  // cloning, otherwise html2canvas can capture text with the fallback font
+  // while the layout was measured with another one.
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
   const clone = element.cloneNode(true) as HTMLElement;
 
   clone.style.width = "794px";
@@ -85,8 +92,8 @@ export async function generatePdfFromElement(
     });
 
   removeDarkClasses(clone);
-  forceWhiteBackgrounds(clone);
   prepareCloneForPdf(clone);
+  prepareDanfeRasterLayout(clone);
 
   document.body.appendChild(clone);
 
@@ -141,6 +148,69 @@ export async function generatePdfFromElement(
   }
 }
 
+function prepareDanfeRasterLayout(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>("[data-danfe-header-footer]").forEach((footer) => {
+    footer.style.position = "relative";
+    footer.style.top = "-2pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-header-protocol]").forEach((protocol) => {
+    protocol.style.position = "relative";
+    protocol.style.top = "-1.5pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-duplicate]").forEach((duplicate) => {
+    duplicate.style.paddingBottom = "4pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-duplicate-value]").forEach((value) => {
+    value.style.position = "relative";
+    value.style.top = "-2pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-section-title]").forEach((title) => {
+    title.style.paddingTop = "2pt";
+    title.style.paddingBottom = "2pt";
+    title.style.lineHeight = "1";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-section-title-text]").forEach((text) => {
+    text.style.display = "block";
+    text.style.position = "relative";
+    text.style.top = "-2pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-product-heading]").forEach((heading) => {
+    heading.style.paddingTop = "3pt";
+    heading.style.paddingBottom = "3pt";
+    heading.style.lineHeight = "1.15";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-product-heading-text]").forEach((text) => {
+    text.style.position = "relative";
+    text.style.top = "-2pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-product-description]").forEach((description) => {
+    description.style.paddingBottom = "4pt";
+    description.style.lineHeight = "1.25";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-field]").forEach((field) => {
+    // html2canvas uses a lower Times baseline on WebKitGTK than the browser
+    // renderer. Give each field its own vertical room and move only the value
+    // glyphs up, without changing the normal on-screen DANFE.
+    field.style.paddingBottom = "3pt";
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-danfe-field-value]").forEach((value) => {
+    value.style.fontSize = "8.5pt";
+    value.style.lineHeight = "1";
+    value.style.position = "relative";
+    value.style.top = "-1.5pt";
+  });
+}
+
 async function convertSvgsToImages(root: HTMLElement): Promise<void> {
   const svgs = root.querySelectorAll("svg");
   if (svgs.length === 0) return;
@@ -186,7 +256,10 @@ async function convertSvgsToImages(root: HTMLElement): Promise<void> {
 }
 
 function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
-  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  // DANFEs contain very small text and dense 1px rules. JPEG introduces
+  // ringing around both and becomes illegible after the PDF viewer rescales
+  // the page. PNG keeps the Linux raster fallback lossless.
+  const imgData = canvas.toDataURL("image/png");
   const canvasWidthPx = canvas.width;
   const canvasHeightPx = canvas.height;
   const ratio = CONTENT_WIDTH_MM / (canvasWidthPx / CAPTURE_SCALE);
@@ -195,7 +268,7 @@ function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
   if (totalHeightMM <= CONTENT_HEIGHT_MM) {
     pdf.addImage(
       imgData,
-      "JPEG",
+      "PNG",
       MARGIN_MM,
       MARGIN_MM,
       CONTENT_WIDTH_MM,
@@ -218,8 +291,8 @@ function addCanvasToPdf(pdf: import("jspdf").jsPDF, canvas: HTMLCanvasElement) {
     const pageContentHeight = (sliceHeight / CAPTURE_SCALE) * ratio;
 
     pdf.addImage(
-      pageCanvas.toDataURL("image/jpeg", 0.95),
-      "JPEG",
+      pageCanvas.toDataURL("image/png"),
+      "PNG",
       MARGIN_MM,
       MARGIN_MM,
       CONTENT_WIDTH_MM,
@@ -256,34 +329,6 @@ function prepareCloneForPdf(root: HTMLElement) {
     .forEach((el) => {
       el.style.display = "none";
     });
-}
-
-function forceWhiteBackgrounds(el: HTMLElement) {
-  if (el.classList) {
-    const bgClasses = Array.from(el.classList).filter((c) =>
-      c.startsWith("bg-"),
-    );
-    bgClasses.forEach((c) => {
-      if (
-        c !== "bg-white" &&
-        c !== "bg-transparent" &&
-        c !== "bg-gray-100" &&
-        c !== "bg-gray-200"
-      ) {
-        el.classList.remove(c);
-      }
-    });
-    if (!el.style.backgroundColor || el.style.backgroundColor === "") {
-      el.style.backgroundColor = "#ffffff";
-    }
-  }
-
-  for (let i = 0; i < el.children.length; i++) {
-    const child = el.children[i];
-    if (child instanceof HTMLElement) {
-      forceWhiteBackgrounds(child);
-    }
-  }
 }
 
 function removeDarkClasses(el: HTMLElement) {
