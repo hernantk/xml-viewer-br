@@ -47,8 +47,18 @@ export function formatQuantity(value: string | number): string {
 
 export function formatDate(isoDate: string): string {
   if (!isoDate) return "";
+
+  // Datas sem horário (como dVenc da NF-e) representam um dia civil, não um
+  // instante em UTC. Criá-las com `new Date()` pode deslocá-las para o dia
+  // anterior em fusos negativos, como America/Sao_Paulo.
+  const dateOnly = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+  }
+
   try {
     const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return isoDate;
     return date.toLocaleDateString("pt-BR");
   } catch {
     return isoDate;
