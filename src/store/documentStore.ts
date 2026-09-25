@@ -42,6 +42,7 @@ interface DocumentState {
   setGroupByEmitente: (enabled: boolean) => void;
   setShowIbsCbs: (enabled: boolean) => void;
   initializeDownloadDir: () => Promise<void>;
+  clearRecentFiles: () => void;
   removeRecentFile: (fileId: string) => void;
   togglePin: (fileId: string) => void;
   getRecentFileContent: (fileId: string) => Promise<RecentFileContent>;
@@ -109,8 +110,11 @@ function canReopenRecentFile(filePath: string): boolean {
   return /[\\/]/.test(filePath);
 }
 
+let memoryFileSequence = 0;
+
 function createMemoryFileId(fileName: string): string {
-  return `memory:${fileName}:${Date.now()}`;
+  memoryFileSequence += 1;
+  return `memory:${fileName}:${Date.now()}:${memoryFileSequence}`;
 }
 
 function getFileLabel(fileId: string): string {
@@ -373,7 +377,58 @@ async function readFilesystemFile(path: string): Promise<string> {
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("read_file", { path });
+  try {
+    return await invoke<string>("read_file", { path });
+  } catch {
+    try {
+      const cached = await invoke<string | null>("read_cached_document", {
+        fileId: path,
+      });
+      if (typeof cached === "string") return cached;
+    } catch {
+      /* surface the user-facing message below */
+    }
+
+    throw new Error(
+      "O arquivo original foi removido ou movido e não há uma cópia interna disponível.",
+    );
+  }
+}
+
+async function cacheFilesystemDocument(
+  fileId: string,
+  content: string,
+): Promise<void> {
+  if (!isTauriRuntime() || !canReopenRecentFile(fileId)) return;
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("cache_document", { fileId, content });
+  } catch {
+    // The original file remains usable even if the internal copy fails.
+  }
+}
+
+async function removeCachedDocument(fileId: string): Promise<void> {
+  if (!isTauriRuntime() || !canReopenRecentFile(fileId)) return;
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("remove_cached_document", { fileId });
+  } catch {
+    /* best-effort cache cleanup */
+  }
+}
+
+async function clearDocumentCache(): Promise<void> {
+  if (!isTauriRuntime()) return;
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("clear_document_cache");
+  } catch {
+    /* best-effort cache cleanup */
+  }
 }
 
 async function resolveRecentFileContent(
@@ -445,6 +500,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
 
       const doc = parseXml(content);
+      await cacheFilesystemDocument(fileId, content);
       const recent = buildRecentFiles(
         fileId,
         get().recentFiles,
@@ -481,6 +537,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   setDocument: (doc, xml, filePath, edited = false) => {
+    void cacheFilesystemDocument(filePath, xml);
     const recent = buildRecentFiles(
       filePath,
       get().recentFiles,
@@ -557,6 +614,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     localStorage.setItem(MAX_RECENT_FILES_KEY, String(clamped));
     const current = get().recentFiles;
     const trimmed = current.slice(0, clamped);
+    const retainedIds = new Set(trimmed.map((entry) => entry.id));
+    for (const entry of current) {
+      if (!retainedIds.has(entry.id)) void removeCachedDocument(entry.id);
+    }
     const xmlCache = getRecentFileCache();
     persistRecentFiles(trimmed, xmlCache); // already calls persistToFile()
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
@@ -609,11 +670,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
   },
 
+  clearRecentFiles: () => {
+    persistRecentFiles([], {});
+    void clearDocumentCache();
+    set({ recentFiles: [] });
+  },
+
   removeRecentFile: (fileId: string) => {
     const updated = get().recentFiles.filter((entry) => entry.id !== fileId);
     const xmlCache = getRecentFileCache();
     delete xmlCache[fileId];
     persistRecentFiles(updated, xmlCache);
+    void removeCachedDocument(fileId);
     if (get().currentFilePath === fileId) {
       set({
         recentFiles: updated,
@@ -653,13 +721,36 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ loading: true, error: null });
     await new Promise((r) => setTimeout(r, 0));
 
+    let loaded = 0;
+    let skipped = 0;
+    let firstErrorMessage: string | null = null;
+    let lastDoc: ParsedDocument | null = null;
+    let lastXml: string | null = null;
+    let lastFilePath: string | null = null;
+    let recentFiles = get().recentFiles;
+    const xmlCache = { ...getRecentFileCache() };
+    const parsedFiles: { id: string; content: string; doc: ParsedDocument }[] = [];
+
+    for (const file of files) {
+      try {
+        const doc = parseXml(file.content);
+        parsedFiles.push({ ...file, doc });
+      } catch (error) {
+        skipped++;
+        if (!firstErrorMessage && error instanceof Error) {
+          firstErrorMessage = error.message;
+        }
+      }
+    }
+
     let limitIncreased = false;
     let currentMax = get().maxRecentFiles;
-    const currentCount = get().recentFiles.length;
-    const uniqueNewIds = new Set(files.map((f) => f.id));
-    const existingIds = new Set(get().recentFiles.map((r) => r.id));
-    const trulyNewCount = [...uniqueNewIds].filter((id) => !existingIds.has(id)).length;
-    const totalAfterImport = currentCount + trulyNewCount;
+    const existingIds = new Set(recentFiles.map((entry) => entry.id));
+    const uniqueValidIds = new Set(parsedFiles.map((file) => file.id));
+    const trulyNewCount = [...uniqueValidIds].filter(
+      (id) => !existingIds.has(id),
+    ).length;
+    const totalAfterImport = recentFiles.length + trulyNewCount;
 
     if (totalAfterImport > currentMax) {
       const newLimit = totalAfterImport + 500;
@@ -670,18 +761,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       // persistToFile() will be called by persistRecentFiles() below
     }
 
-    let loaded = 0;
-    let skipped = 0;
-    let firstErrorMessage: string | null = null;
-    let lastDoc: ParsedDocument | null = null;
-    let lastXml: string | null = null;
-    let lastFilePath: string | null = null;
-    let recentFiles = get().recentFiles;
-    const xmlCache = { ...getRecentFileCache() };
-
-    for (const file of files) {
+    for (const file of parsedFiles) {
       try {
-        const doc = parseXml(file.content);
+        const { doc } = file;
         recentFiles = buildRecentFiles(
           file.id,
           recentFiles,
@@ -695,6 +777,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           xmlCache[file.id] = file.content;
         } else {
           delete xmlCache[file.id];
+          await cacheFilesystemDocument(file.id, file.content);
         }
         lastDoc = doc;
         lastXml = file.content;
@@ -710,21 +793,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     persistRecentFiles(recentFiles, xmlCache);
 
-    set({
-      currentDocument: lastDoc,
-      currentXml: lastXml,
-      currentFilePath: lastFilePath,
-      recentFiles,
-      loading: false,
-      error:
-        loaded === 0 && firstErrorMessage
-          ? firstErrorMessage
-          : skipped > 0
-            ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
-            : null,
-      validation: null,
-      isEdited: false,
-    });
+    const error =
+      loaded === 0 && firstErrorMessage
+        ? firstErrorMessage
+        : skipped > 0
+          ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
+          : null;
+
+    if (loaded > 0) {
+      set({
+        currentDocument: lastDoc,
+        currentXml: lastXml,
+        currentFilePath: lastFilePath,
+        recentFiles,
+        loading: false,
+        error,
+        validation: null,
+        isEdited: false,
+      });
+    } else {
+      set({ recentFiles, loading: false, error });
+    }
 
     return { loaded, skipped, limitIncreased, newLimit: currentMax };
   },

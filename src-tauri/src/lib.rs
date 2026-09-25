@@ -105,6 +105,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::document_cache::cache_document,
+            commands::document_cache::read_cached_document,
+            commands::document_cache::remove_cached_document,
+            commands::document_cache::clear_document_cache,
             commands::parse::parse_document,
             commands::parse::read_file,
             commands::parse::take_pending_open_paths,

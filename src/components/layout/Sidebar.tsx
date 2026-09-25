@@ -197,53 +197,53 @@ export function Sidebar() {
       const ItemIcon = meta?.icon;
 
       return (
-        <button
-          onClick={() => loadFile(recentFile.id)}
+        <div
           onContextMenu={(e) => handleContextMenu(e, recentFile.id)}
-          className={`w-full rounded-md px-2 py-1.5 text-left transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
+          className={`flex w-full items-center rounded-md px-2 py-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
             recentFile.id === currentFilePath
               ? "bg-gray-200 dark:bg-gray-700"
               : ""
           }`}
-          title={recentFile.label}
         >
-          <span className="flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400">
-                {ItemIcon ? (
-                  <ItemIcon size={13} className="shrink-0" />
-                ) : (
-                  <Search size={13} className="shrink-0" />
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {recentFile.label}
-                </span>
-              </span>
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePin(recentFile.id);
-              }}
-              className={`shrink-0 p-0.5 rounded transition ${
-                recentFile.pinned
-                  ? "text-blue-500 hover:text-blue-600"
-                  : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
-              }`}
-              title={recentFile.pinned ? "Desafixar" : "Fixar"}
-            >
-              <Pin size={12} />
-            </button>
-            <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
-              {formatTimeSince(
-                recentFile.lastOpenedAt,
-                recentFile.id === currentFilePath ? Date.now() : now,
+          <button
+            type="button"
+            onClick={() => loadFile(recentFile.id)}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            title={recentFile.label}
+          >
+            <span className="text-gray-500 dark:text-gray-400">
+              {ItemIcon ? (
+                <ItemIcon size={13} className="shrink-0" />
+              ) : (
+                <Search size={13} className="shrink-0" />
               )}
             </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-gray-700 dark:text-gray-200">
+                {recentFile.label}
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => togglePin(recentFile.id)}
+            className={`shrink-0 rounded p-0.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              recentFile.pinned
+                ? "text-blue-500 hover:text-blue-600"
+                : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
+            }`}
+            aria-label={`${recentFile.pinned ? "Desafixar" : "Fixar"} ${recentFile.label}`}
+            title={recentFile.pinned ? "Desafixar" : "Fixar"}
+          >
+            <Pin size={12} />
+          </button>
+          <span className="w-7 shrink-0 text-right text-[10px] font-medium text-gray-400 dark:text-gray-500">
+            {formatTimeSince(
+              recentFile.lastOpenedAt,
+              recentFile.id === currentFilePath ? Date.now() : now,
+            )}
           </span>
-        </button>
+        </div>
       );
     },
     [currentFilePath, handleContextMenu, loadFile, now, togglePin],

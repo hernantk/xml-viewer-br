@@ -6,33 +6,18 @@ export function useFileOpen() {
   const loadMultipleFiles = useDocumentStore((s) => s.loadMultipleFiles);
   const loadPaths = useDocumentStore((s) => s.loadPaths);
   const setLoading = useDocumentStore((s) => s.setLoading);
+  const setError = useDocumentStore((s) => s.setError);
   const [importNotice, setImportNotice] = useState<string | null>(null);
 
   const openFile = useCallback(async () => {
+    let selected: string | string[] | null;
     try {
-      // Try to use Tauri dialog
       const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({
+      selected = await open({
         multiple: true,
         filters: [{ name: "XML", extensions: ["xml"] }],
       });
-
-      if (!selected) return;
-
-      const paths = Array.isArray(selected) ? selected : [selected];
-      if (paths.length === 0) return;
-      const result = await loadPaths(paths);
-      if (result.limitIncreased) {
-        setImportNotice(
-          `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
-        );
-        setTimeout(() => setImportNotice(null), 5000);
-      } else if (result.loaded > 1) {
-        setImportNotice(`${result.loaded} arquivo(s) importado(s).`);
-        setTimeout(() => setImportNotice(null), 4000);
-      }
     } catch {
-      // Fallback for browser: use file input
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".xml";
@@ -46,7 +31,7 @@ export function useFileOpen() {
         try {
           if (fileList.length === 1) {
             const text = await fileList[0].text();
-            loadFile(createMemoryFileId(fileList[0].name), text);
+            await loadFile(createMemoryFileId(fileList[0].name), text);
             return;
           }
 
@@ -69,13 +54,43 @@ export function useFileOpen() {
             setImportNotice(`${result.loaded} arquivo(s) importado(s).`);
             setTimeout(() => setImportNotice(null), 4000);
           }
-        } catch {
+        } catch (error) {
           setLoading(false);
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível importar o(s) arquivo(s).",
+          );
         }
       };
       input.click();
+      return;
     }
-  }, [loadFile, loadMultipleFiles, loadPaths, setLoading]);
+
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
+    if (paths.length === 0) return;
+
+    try {
+      const result = await loadPaths(paths);
+      if (result.limitIncreased) {
+        setImportNotice(
+          `${result.loaded} arquivo(s) importado(s). Limite aumentado para ${result.newLimit}.`,
+        );
+        setTimeout(() => setImportNotice(null), 5000);
+      } else if (result.loaded > 1) {
+        setImportNotice(`${result.loaded} arquivo(s) importado(s).`);
+        setTimeout(() => setImportNotice(null), 4000);
+      }
+    } catch (error) {
+      setLoading(false);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível importar o(s) arquivo(s).",
+      );
+    }
+  }, [loadFile, loadMultipleFiles, loadPaths, setError, setLoading]);
 
   return { openFile, importNotice };
 }
