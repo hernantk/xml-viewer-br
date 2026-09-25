@@ -58,6 +58,38 @@ const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
 const GROUP_BY_EMITENTE_KEY = "xmlviewer-group-by-emitente";
 const SHOW_IBS_CBS_KEY = "xmlviewer-show-ibs-cbs";
+const FILE_READ_TIMEOUT_MS = 15_000;
+const CACHE_OPERATION_TIMEOUT_MS = 5_000;
+
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
 
 function getGroupByEmitente(): boolean {
   try {
@@ -378,12 +410,18 @@ async function readFilesystemFile(path: string): Promise<string> {
 
   const { invoke } = await import("@tauri-apps/api/core");
   try {
-    return await invoke<string>("read_file", { path });
+    return await withTimeout(
+      invoke<string>("read_file", { path }),
+      FILE_READ_TIMEOUT_MS,
+      "A leitura do arquivo original excedeu o tempo limite.",
+    );
   } catch {
     try {
-      const cached = await invoke<string | null>("read_cached_document", {
-        fileId: path,
-      });
+      const cached = await withTimeout(
+        invoke<string | null>("read_cached_document", { fileId: path }),
+        FILE_READ_TIMEOUT_MS,
+        "A leitura da cópia interna excedeu o tempo limite.",
+      );
       if (typeof cached === "string") return cached;
     } catch {
       /* surface the user-facing message below */
@@ -403,7 +441,11 @@ async function cacheFilesystemDocument(
 
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("cache_document", { fileId, content });
+    await withTimeout(
+      invoke("cache_document", { fileId, content }),
+      CACHE_OPERATION_TIMEOUT_MS,
+      "A criação da cópia interna excedeu o tempo limite.",
+    );
   } catch {
     // The original file remains usable even if the internal copy fails.
   }
@@ -414,7 +456,11 @@ async function removeCachedDocument(fileId: string): Promise<void> {
 
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("remove_cached_document", { fileId });
+    await withTimeout(
+      invoke("remove_cached_document", { fileId }),
+      CACHE_OPERATION_TIMEOUT_MS,
+      "A remoção da cópia interna excedeu o tempo limite.",
+    );
   } catch {
     /* best-effort cache cleanup */
   }
@@ -425,7 +471,11 @@ async function clearDocumentCache(): Promise<void> {
 
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("clear_document_cache");
+    await withTimeout(
+      invoke("clear_document_cache"),
+      CACHE_OPERATION_TIMEOUT_MS,
+      "A limpeza das cópias internas excedeu o tempo limite.",
+    );
   } catch {
     /* best-effort cache cleanup */
   }
@@ -721,6 +771,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ loading: true, error: null });
     await new Promise((r) => setTimeout(r, 0));
 
+    try {
     let loaded = 0;
     let skipped = 0;
     let firstErrorMessage: string | null = null;
@@ -815,7 +866,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       set({ recentFiles, loading: false, error });
     }
 
-    return { loaded, skipped, limitIncreased, newLimit: currentMax };
+      return { loaded, skipped, limitIncreased, newLimit: currentMax };
+    } catch (error) {
+      set({
+        error: getErrorMessage(error, "Não foi possível importar os arquivos."),
+      });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
   },
 
   loadPaths: async (paths) => {

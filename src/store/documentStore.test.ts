@@ -89,6 +89,24 @@ describe("documentStore recent file cache", () => {
     });
   });
 
+  it("encerra o loading quando os comandos de leitura não respondem", async () => {
+    vi.useFakeTimers();
+    mocks.invoke.mockImplementation(() => new Promise<string>(() => {}));
+
+    try {
+      const store = await importStore();
+      const loading = store.getState().loadFile(FILE_PATH);
+
+      await vi.advanceTimersByTimeAsync(30_001);
+      await loading;
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("cópia interna");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("preserva o conteúdo e a proveniência de um rascunho editado", async () => {
     localStorage.setItem(
       "xmlviewer-recent",
@@ -266,5 +284,57 @@ describe("documentStore recent file cache", () => {
     await vi.waitFor(() => {
       expect(mocks.invoke).toHaveBeenCalledWith("clear_document_cache");
     });
+  });
+
+  it("encerra o loading se a persistência do lote falhar", async () => {
+    const store = await importStore();
+    const originalSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === "xmlviewer-recent-cache") {
+          throw new DOMException("Quota excedida", "QuotaExceededError");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      await expect(
+        store.getState().loadMultipleFiles([
+          { id: "memory:lote.xml:1", content: FRESH_XML },
+        ]),
+      ).rejects.toThrow("Quota excedida");
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("Quota excedida");
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
+  it("encerra o loading se não puder aumentar o limite", async () => {
+    const store = await importStore();
+    store.getState().setMaxRecentFiles(1);
+    const originalSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === "xmlviewer-max-recent") {
+          throw new DOMException("Quota excedida", "QuotaExceededError");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      await expect(
+        store.getState().loadMultipleFiles([
+          { id: "memory:1.xml:1", content: FRESH_XML },
+          { id: "memory:2.xml:2", content: FRESH_XML },
+        ]),
+      ).rejects.toThrow("Quota excedida");
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("Quota excedida");
+    } finally {
+      setItem.mockRestore();
+    }
   });
 });
