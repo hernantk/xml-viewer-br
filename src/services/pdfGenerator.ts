@@ -55,7 +55,7 @@ export async function generatePdfFromElement(
   element: HTMLElement,
   _filename: string,
   options: PdfGenerationOptions = {},
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
   const { html2canvas, jsPDF } = await loadDeps();
 
   // Linux uses this raster fallback. Wait for the final font metrics before
