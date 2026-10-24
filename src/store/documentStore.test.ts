@@ -63,6 +63,50 @@ describe("documentStore recent file cache", () => {
       .toEqual({});
   });
 
+  it("usa a cópia interna quando o arquivo original foi removido", async () => {
+    localStorage.setItem(
+      "xmlviewer-recent",
+      JSON.stringify([
+        {
+          id: FILE_PATH,
+          label: "nota.xml",
+          source: "filesystem",
+          lastOpenedAt: 1,
+        },
+      ]),
+    );
+    mocks.invoke
+      .mockRejectedValueOnce(new Error("Arquivo não encontrado"))
+      .mockResolvedValueOnce(FRESH_XML);
+
+    const store = await importStore();
+
+    await expect(
+      store.getState().getRecentFileContent(FILE_PATH),
+    ).resolves.toEqual({ content: FRESH_XML, edited: false });
+    expect(mocks.invoke).toHaveBeenNthCalledWith(2, "read_cached_document", {
+      fileId: FILE_PATH,
+    });
+  });
+
+  it("encerra o loading quando os comandos de leitura não respondem", async () => {
+    vi.useFakeTimers();
+    mocks.invoke.mockImplementation(() => new Promise<string>(() => {}));
+
+    try {
+      const store = await importStore();
+      const loading = store.getState().loadFile(FILE_PATH);
+
+      await vi.advanceTimersByTimeAsync(30_001);
+      await loading;
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("cópia interna");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("preserva o conteúdo e a proveniência de um rascunho editado", async () => {
     localStorage.setItem(
       "xmlviewer-recent",
@@ -99,6 +143,13 @@ describe("documentStore recent file cache", () => {
 
     expect(JSON.parse(localStorage.getItem("xmlviewer-recent-cache") ?? "{}"))
       .toEqual({ [memoryId]: STALE_XML });
+    await vi.waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith(
+        "library_store_xml",
+        expect.objectContaining({ content: FRESH_XML, fileName: "nota.xml" }),
+      ),
+    );
+    expect(mocks.invoke).not.toHaveBeenCalledWith("cache_document", expect.anything());
   });
 
   it("persiste conteúdo e sinalização de edição atomicamente", async () => {
@@ -239,5 +290,150 @@ describe("documentStore recent file cache", () => {
     await expect(
       useDocumentStore.getState().getRecentFileContent(memoryId),
     ).resolves.toEqual({ content: STALE_XML, edited: false });
+  });
+
+  it("migra cópias do document-cache antigo e limpa a origem", async () => {
+    const storedPath = "C:/AppData/xmls/outros/nota.xml";
+    localStorage.setItem(
+      "xmlviewer-recent",
+      JSON.stringify([
+        { id: FILE_PATH, label: "nota.xml", source: "filesystem", lastOpenedAt: 1 },
+      ]),
+    );
+    mocks.invoke.mockImplementation(async (cmd, args) => {
+      if (cmd === "read_file") throw new Error("arquivo removido");
+      if (cmd === "read_cached_document" && args?.fileId === FILE_PATH) return FRESH_XML;
+      if (cmd === "library_store_xml") return storedPath;
+      return "";
+    });
+
+    const { useDocumentStore, migrateRecentFilesToLibrary } = await import("./documentStore");
+    await migrateRecentFilesToLibrary();
+
+    expect(useDocumentStore.getState().recentFiles[0]?.storedPath).toBe(storedPath);
+    expect(mocks.invoke).toHaveBeenCalledWith(
+      "library_store_xml",
+      expect.objectContaining({ content: FRESH_XML }),
+    );
+    expect(mocks.invoke).toHaveBeenCalledWith("remove_cached_document", { fileId: FILE_PATH });
+  });
+
+  it("não aumenta o limite por arquivos que falham durante a importação", async () => {
+    const store = await importStore();
+    store.getState().setMaxRecentFiles(2);
+
+    const result = await store.getState().loadMultipleFiles([
+      { id: "C:\\documentos\\invalida-1.xml", content: "<nfe>" },
+      { id: "C:\\documentos\\invalida-2.xml", content: "<nfe>" },
+      { id: "C:\\documentos\\invalida-3.xml", content: "<nfe>" },
+    ]);
+
+    expect(result).toMatchObject({
+      loaded: 0,
+      skipped: 3,
+      limitIncreased: false,
+      newLimit: 2,
+    });
+    expect(store.getState().maxRecentFiles).toBe(2);
+  });
+
+  it("preserva a nota aberta quando todo o lote importado é inválido", async () => {
+    const store = await importStore();
+    store.getState().setDocument(
+      { documentType: "xml" },
+      FRESH_XML,
+      FILE_PATH,
+    );
+
+    const result = await store.getState().loadMultipleFiles([
+      { id: "C:\\documentos\\invalida.xml", content: "<nfe>" },
+    ]);
+
+    expect(result).toMatchObject({ loaded: 0, skipped: 1 });
+    expect(store.getState().currentFilePath).toBe(FILE_PATH);
+    expect(store.getState().currentXml).toBe(FRESH_XML);
+    expect(store.getState().loading).toBe(false);
+  });
+
+  it("gera IDs distintos para arquivos em memória com o mesmo nome", async () => {
+    const { createMemoryFileId } = await import("./documentStore");
+    vi.spyOn(Date, "now").mockReturnValue(123);
+
+    expect(createMemoryFileId("nota.xml")).not.toBe(
+      createMemoryFileId("nota.xml"),
+    );
+  });
+
+  it("limpa o histórico e o cache sem fechar a nota atual", async () => {
+    const store = await importStore();
+    const memoryId = "memory:nota.xml:1";
+    store.getState().setDocument(
+      { documentType: "xml" },
+      FRESH_XML,
+      memoryId,
+    );
+
+    store.getState().clearRecentFiles();
+
+    expect(store.getState().recentFiles).toEqual([]);
+    expect(store.getState().currentFilePath).toBe(memoryId);
+    expect(store.getState().currentXml).toBe(FRESH_XML);
+    expect(localStorage.getItem("xmlviewer-recent")).toBe("[]");
+    expect(localStorage.getItem("xmlviewer-recent-cache")).toBe("{}");
+    await vi.waitFor(() => {
+      expect(mocks.invoke).toHaveBeenCalledWith("clear_document_cache");
+    });
+  });
+
+  it("encerra o loading se a persistência do lote falhar", async () => {
+    const store = await importStore();
+    const originalSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === "xmlviewer-recent-cache") {
+          throw new DOMException("Quota excedida", "QuotaExceededError");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      await expect(
+        store.getState().loadMultipleFiles([
+          { id: "memory:lote.xml:1", content: FRESH_XML },
+        ]),
+      ).rejects.toThrow("Quota excedida");
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("Quota excedida");
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
+  it("encerra o loading se não puder aumentar o limite", async () => {
+    const store = await importStore();
+    store.getState().setMaxRecentFiles(1);
+    const originalSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === "xmlviewer-max-recent") {
+          throw new DOMException("Quota excedida", "QuotaExceededError");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    try {
+      await expect(
+        store.getState().loadMultipleFiles([
+          { id: "memory:1.xml:1", content: FRESH_XML },
+          { id: "memory:2.xml:2", content: FRESH_XML },
+        ]),
+      ).rejects.toThrow("Quota excedida");
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain("Quota excedida");
+    } finally {
+      setItem.mockRestore();
+    }
   });
 });

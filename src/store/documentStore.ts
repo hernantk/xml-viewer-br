@@ -43,6 +43,7 @@ interface DocumentState {
   setGroupByEmitente: (enabled: boolean) => void;
   setShowIbsCbs: (enabled: boolean) => void;
   initializeDownloadDir: () => Promise<void>;
+  clearRecentFiles: () => void;
   removeRecentFile: (fileId: string) => void;
   togglePin: (fileId: string) => void;
   getRecentFileContent: (fileId: string) => Promise<RecentFileContent>;
@@ -58,6 +59,38 @@ const RECENT_FILES_KEY = "xmlviewer-recent";
 const RECENT_CACHE_KEY = "xmlviewer-recent-cache";
 const GROUP_BY_EMITENTE_KEY = "xmlviewer-group-by-emitente";
 const SHOW_IBS_CBS_KEY = "xmlviewer-show-ibs-cbs";
+const FILE_READ_TIMEOUT_MS = 15_000;
+const CACHE_OPERATION_TIMEOUT_MS = 5_000;
+
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
 
 function getGroupByEmitente(): boolean {
   try {
@@ -110,8 +143,11 @@ function canReopenRecentFile(filePath: string): boolean {
   return /[\\/]/.test(filePath);
 }
 
+let memoryFileSequence = 0;
+
 function createMemoryFileId(fileName: string): string {
-  return `memory:${fileName}:${Date.now()}`;
+  memoryFileSequence += 1;
+  return `memory:${fileName}:${Date.now()}:${memoryFileSequence}`;
 }
 
 function getFileLabel(fileId: string): string {
@@ -473,6 +509,13 @@ export async function migrateRecentFilesToLibrary(): Promise<void> {
     if (content !== undefined) {
       await syncEntryToLibrary(entry.id, content);
     }
+
+    const migrated = useDocumentStore
+      .getState()
+      .recentFiles.find((e) => e.id === entry.id);
+    if (migrated?.storedPath) {
+      await removeCachedDocument(entry.id);
+    }
   }
 }
 
@@ -482,7 +525,61 @@ async function readFilesystemFile(path: string): Promise<string> {
   }
 
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<string>("read_file", { path });
+  try {
+    return await withTimeout(
+      invoke<string>("read_file", { path }),
+      FILE_READ_TIMEOUT_MS,
+      "A leitura do arquivo original excedeu o tempo limite.",
+    );
+  } catch {
+    // Copies from the old flat document-cache (1.6.7–1.6.9), still read
+    // until the startup migration moves them into the library.
+    try {
+      const cached = await withTimeout(
+        invoke<string | null>("read_cached_document", { fileId: path }),
+        FILE_READ_TIMEOUT_MS,
+        "A leitura da cópia interna excedeu o tempo limite.",
+      );
+      if (typeof cached === "string") return cached;
+    } catch {
+      /* surface the user-facing message below */
+    }
+
+    throw new Error(
+      "O arquivo original foi removido ou movido e não há uma cópia interna disponível.",
+    );
+  }
+}
+
+/** Drops an entry's copy from the old document-cache, if any. */
+async function removeCachedDocument(fileId: string): Promise<void> {
+  if (!isTauriRuntime() || !canReopenRecentFile(fileId)) return;
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await withTimeout(
+      invoke("remove_cached_document", { fileId }),
+      CACHE_OPERATION_TIMEOUT_MS,
+      "A remoção da cópia interna excedeu o tempo limite.",
+    );
+  } catch {
+    /* best-effort cache cleanup */
+  }
+}
+
+async function clearDocumentCache(): Promise<void> {
+  if (!isTauriRuntime()) return;
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await withTimeout(
+      invoke("clear_document_cache"),
+      CACHE_OPERATION_TIMEOUT_MS,
+      "A limpeza das cópias internas excedeu o tempo limite.",
+    );
+  } catch {
+    /* best-effort cache cleanup */
+  }
 }
 
 async function resolveRecentFileContent(
@@ -686,6 +783,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     localStorage.setItem(MAX_RECENT_FILES_KEY, String(clamped));
     const current = get().recentFiles;
     const trimmed = current.slice(0, clamped);
+    const retainedIds = new Set(trimmed.map((entry) => entry.id));
+    for (const entry of current) {
+      if (!retainedIds.has(entry.id)) void removeCachedDocument(entry.id);
+    }
     const xmlCache = getRecentFileCache();
     persistRecentFiles(trimmed, xmlCache); // already calls persistToFile()
     set({ maxRecentFiles: clamped, recentFiles: trimmed });
@@ -738,11 +839,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
   },
 
+  clearRecentFiles: () => {
+    persistRecentFiles([], {});
+    void clearDocumentCache();
+    set({ recentFiles: [] });
+  },
+
   removeRecentFile: (fileId: string) => {
     const updated = get().recentFiles.filter((entry) => entry.id !== fileId);
     const xmlCache = getRecentFileCache();
     delete xmlCache[fileId];
     persistRecentFiles(updated, xmlCache);
+    void removeCachedDocument(fileId);
     if (get().currentFilePath === fileId) {
       set({
         recentFiles: updated,
@@ -782,13 +890,37 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ loading: true, error: null });
     await new Promise((r) => setTimeout(r, 0));
 
+    try {
+    let loaded = 0;
+    let skipped = 0;
+    let firstErrorMessage: string | null = null;
+    let lastDoc: ParsedDocument | null = null;
+    let lastXml: string | null = null;
+    let lastFilePath: string | null = null;
+    let recentFiles = get().recentFiles;
+    const xmlCache = { ...getRecentFileCache() };
+    const parsedFiles: { id: string; content: string; doc: ParsedDocument }[] = [];
+
+    for (const file of files) {
+      try {
+        const doc = parseXml(file.content);
+        parsedFiles.push({ ...file, doc });
+      } catch (error) {
+        skipped++;
+        if (!firstErrorMessage && error instanceof Error) {
+          firstErrorMessage = error.message;
+        }
+      }
+    }
+
     let limitIncreased = false;
     let currentMax = get().maxRecentFiles;
-    const currentCount = get().recentFiles.length;
-    const uniqueNewIds = new Set(files.map((f) => f.id));
-    const existingIds = new Set(get().recentFiles.map((r) => r.id));
-    const trulyNewCount = [...uniqueNewIds].filter((id) => !existingIds.has(id)).length;
-    const totalAfterImport = currentCount + trulyNewCount;
+    const existingIds = new Set(recentFiles.map((entry) => entry.id));
+    const uniqueValidIds = new Set(parsedFiles.map((file) => file.id));
+    const trulyNewCount = [...uniqueValidIds].filter(
+      (id) => !existingIds.has(id),
+    ).length;
+    const totalAfterImport = recentFiles.length + trulyNewCount;
 
     if (totalAfterImport > currentMax) {
       const newLimit = totalAfterImport + 500;
@@ -799,19 +931,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       // persistToFile() will be called by persistRecentFiles() below
     }
 
-    let loaded = 0;
-    let skipped = 0;
-    let firstErrorMessage: string | null = null;
-    let lastDoc: ParsedDocument | null = null;
-    let lastXml: string | null = null;
-    let lastFilePath: string | null = null;
-    let recentFiles = get().recentFiles;
-    const xmlCache = { ...getRecentFileCache() };
     const loadedContents = new Map<string, string>();
 
-    for (const file of files) {
+    for (const file of parsedFiles) {
       try {
-        const doc = parseXml(file.content);
+        const { doc } = file;
         recentFiles = buildRecentFiles(
           file.id,
           recentFiles,
@@ -841,27 +965,41 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     persistRecentFiles(recentFiles, xmlCache);
 
-    set({
-      currentDocument: lastDoc,
-      currentXml: lastXml,
-      currentFilePath: lastFilePath,
-      recentFiles,
-      loading: false,
-      error:
-        loaded === 0 && firstErrorMessage
-          ? firstErrorMessage
-          : skipped > 0
-            ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
-            : null,
-      validation: null,
-      isEdited: false,
-    });
+    const error =
+      loaded === 0 && firstErrorMessage
+        ? firstErrorMessage
+        : skipped > 0
+          ? `${skipped} arquivo(s) ignorado(s) por erro de leitura.`
+          : null;
+
+    if (loaded > 0) {
+      set({
+        currentDocument: lastDoc,
+        currentXml: lastXml,
+        currentFilePath: lastFilePath,
+        recentFiles,
+        loading: false,
+        error,
+        validation: null,
+        isEdited: false,
+      });
+    } else {
+      set({ recentFiles, loading: false, error });
+    }
 
     for (const [id, content] of loadedContents) {
       void syncEntryToLibrary(id, content);
     }
 
-    return { loaded, skipped, limitIncreased, newLimit: currentMax };
+      return { loaded, skipped, limitIncreased, newLimit: currentMax };
+    } catch (error) {
+      set({
+        error: getErrorMessage(error, "Não foi possível importar os arquivos."),
+      });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
   },
 
   loadPaths: async (paths) => {

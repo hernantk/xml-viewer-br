@@ -1,3 +1,4 @@
+pub mod document_cache;
 pub mod library;
 pub mod parse;
 pub mod pdf;
