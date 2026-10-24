@@ -208,7 +208,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => loadFile(recentFile.id)}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
             title={recentFile.label}
           >
             <span className="text-gray-500 dark:text-gray-400">
@@ -227,7 +227,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => togglePin(recentFile.id)}
-            className={`shrink-0 rounded p-0.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            className={`shrink-0 rounded p-0.5 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
               recentFile.pinned
                 ? "text-blue-500 hover:text-blue-600"
                 : "text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
@@ -301,7 +301,7 @@ export function Sidebar() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Chave, nº, CNPJ, nome…"
-                  className="h-7 w-full rounded-md bg-white/90 py-1 pl-7 pr-2 text-[11px] text-gray-700 outline-none ring-0 transition placeholder:text-gray-400 focus:bg-white dark:bg-gray-900/80 dark:text-gray-200 dark:focus:bg-gray-900"
+                  className="h-7 w-full rounded-md bg-white/90 py-1 pl-7 pr-2 text-[11px] text-gray-700 outline-hidden ring-0 transition placeholder:text-gray-400 focus:bg-white dark:bg-gray-900/80 dark:text-gray-200 dark:focus:bg-gray-900"
                 />
               </label>
               <div className="relative shrink-0">
@@ -310,7 +310,7 @@ export function Sidebar() {
                   onChange={(e) =>
                     setTypeFilter(e.target.value as "all" | DocumentType)
                   }
-                  className="h-7 appearance-none rounded-md bg-white/90 pl-2 pr-6 text-[11px] font-medium text-gray-600 outline-none transition focus:bg-white dark:bg-gray-900/80 dark:text-gray-300 dark:focus:bg-gray-900"
+                  className="h-7 appearance-none rounded-md bg-white/90 pl-2 pr-6 text-[11px] font-medium text-gray-600 outline-hidden transition focus:bg-white dark:bg-gray-900/80 dark:text-gray-300 dark:focus:bg-gray-900"
                 >
                   <option value="all">Todos</option>
                   <option value="nfe">NF-e</option>

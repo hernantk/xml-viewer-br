@@ -93,7 +93,7 @@ function EditModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 no-print"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 no-print"
       data-block-global-shortcuts
     >
       <div className="mx-4 w-full max-w-3xl rounded-lg bg-white shadow-xl dark:bg-gray-800">
@@ -104,12 +104,12 @@ function EditModal({
         </div>
         <div className="p-4">
           {error && (
-            <div className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+            <div className="mb-3 rounded-sm bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
               {error}
             </div>
           )}
           <textarea
-            className="w-full h-[60vh] rounded border border-gray-300 bg-gray-50 p-3 font-mono text-xs leading-relaxed text-gray-800 outline-none resize-y focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-blue-500"
+            className="w-full h-[60vh] rounded-sm border border-gray-300 bg-gray-50 p-3 font-mono text-xs leading-relaxed text-gray-800 outline-hidden resize-y focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:focus:border-blue-500"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             spellCheck={false}
@@ -118,13 +118,13 @@ function EditModal({
         <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-700">
           <button
             onClick={onCancel}
-            className="rounded px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="rounded-sm px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-sm bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             Aplicar edição
           </button>
@@ -465,12 +465,12 @@ export function DocumentViewer() {
           </div>
         </div>
         {isEdited && (
-          <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/12 dark:text-amber-300 dark:ring-amber-500/30">
+          <span className="inline-flex items-center rounded-sm bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/12 dark:text-amber-300 dark:ring-amber-500/30">
             Editado
           </span>
         )}
         <span
-          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${documentMeta.badgeClassName}`}
+          className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${documentMeta.badgeClassName}`}
         >
           {documentMeta.label}
         </span>
@@ -478,7 +478,7 @@ export function DocumentViewer() {
         {chave && (
           <button
             onClick={handleCopyKey}
-            className="ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="ml-auto flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
             title={`Copiar chave: ${chave}`}
           >
             {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
@@ -489,7 +489,7 @@ export function DocumentViewer() {
         {currentXml && (
           <button
             onClick={() => setEditModalOpen(true)}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors ${!chave ? "ml-auto" : ""}`}
+            className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors ${!chave ? "ml-auto" : ""}`}
             title="Editar XML"
           >
             <Pen size={13} />
@@ -500,7 +500,7 @@ export function DocumentViewer() {
         {currentXml && (
           <button
             onClick={handleDownloadXml}
-            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors`}
+            className={`flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors`}
             title="Baixar XML"
           >
             <Download size={13} />
@@ -511,7 +511,7 @@ export function DocumentViewer() {
         {isEdited && canOverwrite && (
           <button
             onClick={handleOverwriteFile}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/20 dark:hover:text-amber-300 transition-colors"
+            className="flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/20 dark:hover:text-amber-300 transition-colors"
             title="Salvar no arquivo original"
           >
             <Save size={13} />
@@ -525,7 +525,7 @@ export function DocumentViewer() {
       </div>
 
       {isEdited && (
-        <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 no-print dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+        <div className="mb-3 rounded-sm border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 no-print dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
           XML editado. Esta visualização não representa necessariamente o documento fiscal original.
         </div>
       )}

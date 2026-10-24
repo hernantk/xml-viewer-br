@@ -16,7 +16,7 @@ export function BatchRenderSurface({ printable, contentId = "batch-document-view
     return (
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed -left-[200vw] top-0 h-0 overflow-hidden opacity-0"
+        className="pointer-events-none fixed left-[-200vw] top-0 h-0 overflow-hidden opacity-0"
       />
     );
   }
@@ -26,7 +26,7 @@ export function BatchRenderSurface({ printable, contentId = "batch-document-view
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed -left-[200vw] top-0 w-[794px] overflow-hidden opacity-0"
+      className="pointer-events-none fixed left-[-200vw] top-0 w-[794px] overflow-hidden opacity-0"
     >
       <div id={contentId} className="relative">
         {document.documentType === "nfe" && document.nfe ? (

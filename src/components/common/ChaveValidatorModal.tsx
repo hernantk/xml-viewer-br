@@ -81,7 +81,7 @@ export function ChaveValidatorModal({ open, onClose }: ChaveValidatorModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="rounded-sm p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
             title="Fechar"
           >
             <X size={18} />
@@ -99,7 +99,7 @@ export function ChaveValidatorModal({ open, onClose }: ChaveValidatorModalProps)
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Cole a chave de 44 dígitos"
-                className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
               />
               <button
                 type="button"

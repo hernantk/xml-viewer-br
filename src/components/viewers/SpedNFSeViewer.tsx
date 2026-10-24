@@ -29,11 +29,11 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10pt] font-bold leading-[1.1] break-words">
+      <div className="text-[10pt] font-bold leading-[1.1] wrap-break-word">
         {value || "\u00A0"}
       </div>
     </div>
@@ -50,7 +50,7 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
@@ -78,7 +78,7 @@ export function SpedNFSeViewer({ nfse }: Props) {
 
   const headerBlock = (
     <div>
-      <div className="rounded border border-black p-[3pt] text-center" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="rounded-sm border border-black p-[3pt] text-center" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         <div className="text-[14pt] font-bold tracking-wider">
           NOTA FISCAL DE SERVIÇO ELETRÔNICA - NFS-e
         </div>
@@ -160,7 +160,7 @@ export function SpedNFSeViewer({ nfse }: Props) {
       <div className="grid grid-cols-2">
         <Field label="Tributação Nacional" value={infNFSe.xTribNac} />
       </div>
-      <div className="rounded border border-black px-[2pt] py-[1pt]">
+      <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
         <div className="text-[6pt] leading-[1.1] uppercase">
           Discriminação
         </div>
@@ -285,7 +285,7 @@ export function SpedNFSeViewer({ nfse }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="fixed left-[-200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

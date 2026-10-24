@@ -21,11 +21,11 @@ export function ZoomControls() {
   const canZoomIn = zoom < ZOOM_MAX - 1e-9;
 
   const buttonClass =
-    "flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200";
+    "flex items-center justify-center rounded-sm p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200";
 
   return (
     <div
-      className="flex items-center gap-0.5 rounded border border-gray-200 bg-white px-1 py-0.5 dark:border-gray-700 dark:bg-gray-900"
+      className="flex items-center gap-0.5 rounded-sm border border-gray-200 bg-white px-1 py-0.5 dark:border-gray-700 dark:bg-gray-900"
       title="Zoom da visualização (Ctrl + / Ctrl - / Ctrl 0, ou Ctrl + scroll)"
     >
       {Math.abs(zoom - 1) > 1e-9 && (
@@ -51,7 +51,7 @@ export function ZoomControls() {
       <div className="relative">
         <button
           onClick={() => setPresetOpen((open) => !open)}
-          className="min-w-[48px] rounded px-1 py-0.5 text-center text-xs font-medium tabular-nums text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="min-w-[48px] rounded-sm px-1 py-0.5 text-center text-xs font-medium tabular-nums text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
           title="Nível de zoom — clique para escolher um valor"
           aria-label={`Zoom atual ${formatZoomPercent(zoom)}. Clique para escolher.`}
         >

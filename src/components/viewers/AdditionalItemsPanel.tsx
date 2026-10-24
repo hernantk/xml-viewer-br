@@ -94,7 +94,7 @@ export function AdditionalItemsPanel({ nfe }: { nfe: Nfe }) {
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                 Rastreabilidade / ANVISA
               </span>
-              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+              <span className="rounded-sm bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                 Não sai no PDF
               </span>
             </p>
@@ -103,7 +103,7 @@ export function AdditionalItemsPanel({ nfe }: { nfe: Nfe }) {
             onClick={() => setOpen(false)}
             aria-label="Fechar painel"
             title="Fechar (Esc)"
-            className="shrink-0 rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            className="shrink-0 rounded-sm p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
           >
             <X size={16} />
           </button>

@@ -187,7 +187,7 @@ export function FileDropZone({ children }: FileDropZoneProps) {
     <div className="relative">
       {children}
       {dragging && (
-        <div className="pointer-events-none fixed inset-0 bg-blue-500/20 backdrop-blur-sm z-50 flex items-center justify-center border-4 border-dashed border-blue-500">
+        <div className="pointer-events-none fixed inset-0 bg-blue-500/20 backdrop-blur-xs z-50 flex items-center justify-center border-4 border-dashed border-blue-500">
           <div className="flex flex-col items-center text-blue-600 dark:text-blue-400">
             <Upload size={48} />
             <p className="mt-2 text-lg font-medium">Solte os arquivos XML aqui</p>

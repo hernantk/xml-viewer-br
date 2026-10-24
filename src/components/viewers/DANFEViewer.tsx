@@ -44,11 +44,11 @@ function Field({
   valueClassName?: string;
 }) {
   return (
-    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div data-danfe-field-value className={`text-[10pt] font-bold leading-[1.1] break-words ${valueClassName}`}>
+      <div data-danfe-field-value className={`text-[10pt] font-bold leading-[1.1] wrap-break-word ${valueClassName}`}>
         {value || "\u00A0"}
       </div>
     </div>
@@ -57,7 +57,7 @@ function Field({
 
 function FieldRight({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
@@ -70,7 +70,7 @@ function FieldRight({ label, value, className = "" }: { label: string; value: st
 
 function FieldSmallRight({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div data-danfe-field className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div data-danfe-field className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[5pt] leading-[1.1] uppercase">
         {label}
       </div>
@@ -151,9 +151,9 @@ export function IcmsTaxCalculation({ total }: { total: ICMSTot }) {
       </div>
       <div className="grid grid-cols-4">
         <FieldSmallRight label="V. Total da Nota" value={formatCurrency(total.vNF)} className="font-bold" />
-        <div className="rounded border border-black px-[2pt] py-[1pt]" />
-        <div className="rounded border border-black px-[2pt] py-[1pt]" />
-        <div className="rounded border border-black px-[2pt] py-[1pt]" />
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]" />
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]" />
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]" />
       </div>
     </div>
   );
@@ -297,7 +297,7 @@ function DanfeHeaderBlock({
     <div style={{ fontFamily: "'Times New Roman', Times, serif" }}>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-0">
         {/* Left: Emitente */}
-        <div className="rounded border border-black p-[3pt] flex flex-col items-center justify-center text-center">
+        <div className="rounded-sm border border-black p-[3pt] flex flex-col items-center justify-center text-center">
           <div className="text-[6pt] italic leading-[1.1]">IDENTIFICAÇÃO DO EMITENTE</div>
           <div className="text-[12pt] font-bold leading-[1.1] mt-[2pt]">{emit.xNome}</div>
           {emit.xFant && (
@@ -317,7 +317,7 @@ function DanfeHeaderBlock({
         </div>
 
         {/* Center: DANFE */}
-        <div className="rounded border border-black p-[3pt] text-center flex flex-col items-center justify-center min-w-[110px]">
+        <div className="rounded-sm border border-black p-[3pt] text-center flex flex-col items-center justify-center min-w-[110px]">
           <div className="text-[14pt] font-bold tracking-wider">DANFE</div>
           <div className="text-[8pt] leading-[1.1]">
             Documento Auxiliar da Nota
@@ -346,7 +346,7 @@ function DanfeHeaderBlock({
         </div>
 
         {/* Right: Chave de Acesso + Barcode */}
-        <div className="rounded border border-black p-[3pt] flex flex-col items-center justify-between">
+        <div className="rounded-sm border border-black p-[3pt] flex flex-col items-center justify-between">
           <div className="text-[6pt] leading-[1.1] self-start">CHAVE DE ACESSO</div>
           <div className="w-full px-1 mt-[2pt]">
             <Barcode value={accessKey} />
@@ -375,7 +375,7 @@ function DanfeHeaderBlock({
       {/* Natureza da Operação + Protocolo */}
       <div className="grid grid-cols-[1fr_auto]">
         <Field label="Natureza da Operação" value={ide.natOp} />
-        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt] min-w-[160px]">
+        <div data-danfe-field className="rounded-sm border border-black px-[2pt] py-[1pt] min-w-[160px]">
           <div className="text-[6pt] leading-[1.1] uppercase">
             Protocolo de Autorização de Uso
           </div>
@@ -557,7 +557,7 @@ export function DANFEViewer({ nfe }: Props) {
   const receiptBlock = (
     <div>
       <div className="grid grid-cols-[1fr_auto] gap-0">
-        <div className="rounded border border-black p-[3pt]">
+        <div className="rounded-sm border border-black p-[3pt]">
           <div className="text-[7pt] leading-[1.2]">
             RECEBEMOS DE <span className="font-bold">{emit.xNome}</span> OS PRODUTOS E/OU SERVIÇOS CONSTANTES DA NOTA FISCAL ELETRÔNICA INDICADA ABAIXO.
           </div>
@@ -572,7 +572,7 @@ export function DANFEViewer({ nfe }: Props) {
             <Field label="Identificação e Assinatura do Recebedor" value="" />
           </div>
         </div>
-        <div className="rounded border border-black p-[3pt] text-center min-w-[100px] flex flex-col justify-center">
+        <div className="rounded-sm border border-black p-[3pt] text-center min-w-[100px] flex flex-col justify-center">
           <div className="text-[14pt] font-bold">NF-e</div>
           <div className="text-[10pt] font-bold mt-[2pt]">
             N.º <span className="font-bold">{formatNFNumber(ide.nNF)}</span>
@@ -615,13 +615,13 @@ export function DANFEViewer({ nfe }: Props) {
     <div>
       <SectionTitle>Pagamento</SectionTitle>
       <div className="grid grid-cols-2">
-        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt]">
+        <div data-danfe-field className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">Forma</div>
           <div data-danfe-field-value className="text-[7pt] font-bold leading-[1.1]">
             {pag.detPag.map((dp) => FORMA_PAGAMENTO[dp.tPag] || dp.tPag).join(", ")}
           </div>
         </div>
-        <div data-danfe-field className="rounded border border-black px-[2pt] py-[1pt]">
+        <div data-danfe-field className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">Valor</div>
           <div data-danfe-field-value className="text-[7pt] font-bold leading-[1.1]">
             {formatCurrency(pag.detPag.reduce((sum, dp) => sum + parseFloat(dp.vPag || "0"), 0))}
@@ -642,22 +642,22 @@ export function DANFEViewer({ nfe }: Props) {
           label="Nome / Razão Social"
           value={transp.transporta?.xNome || ""}
           className="min-w-0"
-          valueClassName="!text-[8pt]"
+          valueClassName="text-[8pt]!"
         />
         <Field
           label="Frete"
           value={MODAL_FRETE[transp.modFrete] || transp.modFrete}
           className="min-w-0"
-          valueClassName="!text-[8pt]"
+          valueClassName="text-[8pt]!"
         />
-        <Field label="Código ANTT" value={transp.veicTransp?.RNTRC || ""} className="min-w-0" valueClassName="!text-[8pt]" />
-        <Field label="Placa do Veículo" value={transp.veicTransp?.placa || ""} className="min-w-0" valueClassName="!text-[8pt]" />
-        <Field label="UF" value={transp.veicTransp?.UF || ""} className="min-w-0" valueClassName="!text-[8pt]" />
+        <Field label="Código ANTT" value={transp.veicTransp?.RNTRC || ""} className="min-w-0" valueClassName="text-[8pt]!" />
+        <Field label="Placa do Veículo" value={transp.veicTransp?.placa || ""} className="min-w-0" valueClassName="text-[8pt]!" />
+        <Field label="UF" value={transp.veicTransp?.UF || ""} className="min-w-0" valueClassName="text-[8pt]!" />
         <Field
           label="CNPJ / CPF"
           value={formatCNPJorCPF(transp.transporta?.CNPJ || transp.transporta?.CPF)}
           className="min-w-0"
-          valueClassName="!text-[8pt]"
+          valueClassName="text-[8pt]!"
         />
       </div>
       <div className="grid grid-cols-[1fr_auto_60px_auto]">
@@ -675,7 +675,7 @@ export function DANFEViewer({ nfe }: Props) {
     <div className="break-inside-avoid">
       <SectionTitle>Dados Adicionais</SectionTitle>
       <div className="grid grid-cols-2">
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">
             Informações Complementares
           </div>
@@ -683,7 +683,7 @@ export function DANFEViewer({ nfe }: Props) {
             {infAdic?.infCpl || "\u00A0"}
           </div>
         </div>
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] uppercase leading-[1.1]">
             Reservado ao Fisco
           </div>
@@ -710,7 +710,7 @@ export function DANFEViewer({ nfe }: Props) {
       {cobr.dup && cobr.dup.length > 0 && cobr.dup.length <= 20 && (
         <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10">
           {cobr.dup.map((dup) => (
-            <div data-danfe-duplicate key={dup.nDup} className="rounded border border-black px-[2pt] py-[1pt] text-[8pt]">
+            <div data-danfe-duplicate key={dup.nDup} className="rounded-sm border border-black px-[2pt] py-[1pt] text-[8pt]">
               <div className="font-bold">Nº {dup.nDup}</div>
               <div>{formatDate(dup.dVenc)}</div>
               <div data-danfe-duplicate-value className="text-right font-bold">{formatCurrency(dup.vDup)}</div>
@@ -766,7 +766,7 @@ export function DANFEViewer({ nfe }: Props) {
           <FieldSmallRight label="Total CBS" value={totCBS ? formatCurrency(totCBS) : ""} />
           <FieldSmallRight label="Total IS" value={total.ISTot?.vIS ? formatCurrency(total.ISTot.vIS) : ""} />
           <FieldSmallRight label="V. Total NF c/ IBS/CBS/IS" value={total.vNFTot ? formatCurrency(total.vNFTot) : ""} />
-          <div className="rounded border border-black px-[2pt] py-[1pt]" />
+          <div className="rounded-sm border border-black px-[2pt] py-[1pt]" />
         </div>
         {ibsItems.length > 0 && (
           <div className="overflow-x-auto">
@@ -939,7 +939,7 @@ export function DANFEViewer({ nfe }: Props) {
       {/*
         Off-screen measurement surface.
       */}
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="fixed left-[-200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         <div className="p-4">
           <div ref={measureFirstPageRef}>
             {receiptBlock}

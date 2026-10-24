@@ -79,7 +79,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
           <button
             type="button"
             onClick={handleClose}
-            className="rounded p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="rounded-sm p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
             title="Fechar"
           >
             <X size={18} />
@@ -93,7 +93,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
               value={accessKey}
               onChange={(event) => setAccessKey(event.target.value)}
               placeholder="Digite ou cole a chave de 44 dígitos"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-950"
             />
             <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
               {normalizedAccessKey.length}/44 dígitos. A chave ainda deverá ser informada no portal da NF-e.
@@ -107,7 +107,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
                 type="button"
                 onClick={() => void loadCertificates()}
                 disabled={loadingCertificates}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                className="flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-950/40"
               >
                 <RefreshCw size={13} className={loadingCertificates ? "animate-spin" : ""} />
                 Atualizar
@@ -118,7 +118,7 @@ export function XmlDownloadModal({ open, onClose }: XmlDownloadModalProps) {
               value={selectedCertificate}
               onChange={(event) => handleCertificateChange(event.target.value)}
               disabled={loadingCertificates || certificates.length === 0}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-950"
             >
               {loadingCertificates && <option>Carregando certificados...</option>}
               {!loadingCertificates && certificates.length === 0 && (

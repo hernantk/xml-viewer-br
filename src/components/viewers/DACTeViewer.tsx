@@ -41,11 +41,11 @@ function Field({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
-      <div className="text-[10pt] font-bold leading-[1.1] break-words">
+      <div className="text-[10pt] font-bold leading-[1.1] wrap-break-word">
         {value || "\u00A0"}
       </div>
     </div>
@@ -62,7 +62,7 @@ function FieldRight({
   className?: string;
 }) {
   return (
-    <div className={`rounded rounded border border-black px-[2pt] py-[1pt] ${className}`}>
+    <div className={`rounded-sm rounded-sm border border-black px-[2pt] py-[1pt] ${className}`}>
       <div className="text-[6pt] leading-[1.1] uppercase">
         {label}
       </div>
@@ -159,7 +159,7 @@ export function DACTeViewer({ cte }: Props) {
   const receiptBlock = (
     <div>
         <div className="grid grid-cols-[1fr_auto] gap-0">
-        <div className="rounded border border-black p-[3pt]">
+        <div className="rounded-sm border border-black p-[3pt]">
           <div className="text-[7pt] leading-[1.2]">
             RECEBEMOS DE <span className="font-bold">{emit.xNome}</span> OS
             SERVIÇOS CONSTANTES DO CONHECIMENTO DE TRANSPORTE ELETRÔNICO INDICADO
@@ -170,7 +170,7 @@ export function DACTeViewer({ cte }: Props) {
             <Field label="Identificação e Assinatura do Recebedor" value="" />
           </div>
         </div>
-        <div className="rounded border border-black p-[3pt] text-center min-w-[110px] flex flex-col justify-center">
+        <div className="rounded-sm border border-black p-[3pt] text-center min-w-[110px] flex flex-col justify-center">
           <div className="text-[14pt] font-bold">CT-e</div>
           <div className="text-[10pt] font-bold mt-[2pt]">
             N.º <span className="font-bold">{ide.nCT}</span>
@@ -190,7 +190,7 @@ export function DACTeViewer({ cte }: Props) {
   const headerBlock = (
     <div>
       <div className="grid grid-cols-[1fr_140px_1fr] gap-0">
-        <div className="rounded border border-black p-[3pt] flex flex-col justify-center">
+        <div className="rounded-sm border border-black p-[3pt] flex flex-col justify-center">
           <div className="text-[12pt] font-bold leading-[1.1]">{emit.xNome}</div>
           {emit.xFant && (
             <div className="text-[8pt] leading-[1.1]">
@@ -209,7 +209,7 @@ export function DACTeViewer({ cte }: Props) {
           </div>
         </div>
 
-        <div className="rounded border border-black p-[3pt] text-center flex flex-col items-center justify-center">
+        <div className="rounded-sm border border-black p-[3pt] text-center flex flex-col items-center justify-center">
           <div className="text-[14pt] font-bold tracking-wider">DACTE</div>
           <div className="text-[8pt] leading-[1.1]">
             Documento Auxiliar do
@@ -232,7 +232,7 @@ export function DACTeViewer({ cte }: Props) {
           </div>
         </div>
 
-        <div className="rounded border border-black p-[3pt] flex flex-col items-center justify-between">
+        <div className="rounded-sm border border-black p-[3pt] flex flex-col items-center justify-between">
           <div className="w-full px-2">
             <Barcode value={accessKey} />
           </div>
@@ -273,7 +273,7 @@ export function DACTeViewer({ cte }: Props) {
           value={formatCurrency(vPrest.vTPrest)}
         />
         <FieldRight label="Valor a Receber" value={formatCurrency(vPrest.vRec)} />
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] leading-[1.1] uppercase">
             Componentes
           </div>
@@ -327,7 +327,7 @@ export function DACTeViewer({ cte }: Props) {
                 : ""
             }
           />
-          <div className="rounded border border-black px-[2pt] py-[1pt]">
+          <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
             <div className="text-[6pt] leading-[1.1] uppercase">
               Quantidades
             </div>
@@ -361,7 +361,7 @@ export function DACTeViewer({ cte }: Props) {
     <div>
       <SectionTitle>Dados Adicionais</SectionTitle>
       <div className="grid grid-cols-2">
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] leading-[1.1] uppercase">
             Informações Complementares
           </div>
@@ -369,7 +369,7 @@ export function DACTeViewer({ cte }: Props) {
             {infAdic?.infCpl || "\u00A0"}
           </div>
         </div>
-        <div className="rounded border border-black px-[2pt] py-[1pt]">
+        <div className="rounded-sm border border-black px-[2pt] py-[1pt]">
           <div className="text-[6pt] leading-[1.1] uppercase">
             Reservado ao Fisco
           </div>
@@ -452,7 +452,7 @@ export function DACTeViewer({ cte }: Props) {
         </div>
       </div>
 
-      <div className="fixed -left-[200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+      <div className="fixed left-[-200vw] top-0 w-[210mm] opacity-0 pointer-events-none no-print" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
         {contentBlocks.map((block) => (
           <div
             key={`measure-${block.key}`}

@@ -25,7 +25,7 @@ function SettingToggle({ checked, description, icon, label, onChange }: TogglePr
         <span className="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-gray-400">{description}</span>
       </span>
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="peer sr-only" />
-      <span className="relative mt-1 h-5 w-9 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:bg-gray-600 dark:peer-focus-visible:ring-offset-gray-900" />
+      <span className="relative mt-1 h-5 w-9 shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-xs after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:bg-gray-600 dark:peer-focus-visible:ring-offset-gray-900" />
     </label>
   );
 }
@@ -121,14 +121,14 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} data-block-global-shortcuts className="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-2xl outline-none dark:border-gray-700 dark:bg-gray-950">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} data-block-global-shortcuts className="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-2xl outline-hidden dark:border-gray-700 dark:bg-gray-950">
         <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-gray-900">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300"><Settings2 size={20} /></span>
           <div className="min-w-0 flex-1">
             <h2 id="settings-title" className="text-base font-semibold text-gray-950 dark:text-white">Configurações</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">Personalize a organização, exibição e armazenamento das notas.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar configurações" className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800 dark:hover:text-white"><X size={18} /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar configurações" className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-gray-800 dark:hover:text-white"><X size={18} /></button>
         </header>
 
         <div className="space-y-5 overflow-y-auto p-5">
@@ -149,7 +149,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <label htmlFor="maxRecentFiles" className="block text-sm font-medium text-gray-900 dark:text-gray-100">Máximo de notas recentes</label>
                   <p className="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Atualmente há {recentFilesCount} {recentFilesCount === 1 ? "nota" : "notas"} no histórico.</p>
                   <div className="mt-3 flex items-center gap-2">
-                    <input id="maxRecentFiles" type="number" min={1} step={1} value={inputValue} onChange={(e) => { setInputValue(e.target.value); setShowWarning(false); }} onKeyDown={(e) => e.key === "Enter" && handleSave()} aria-invalid={!isValid} className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
+                    <input id="maxRecentFiles" type="number" min={1} step={1} value={inputValue} onChange={(e) => { setInputValue(e.target.value); setShowWarning(false); }} onKeyDown={(e) => e.key === "Enter" && handleSave()} aria-invalid={!isValid} className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
                     <span className="text-xs text-gray-400">Padrão: 300</span>
                   </div>
                   {!isValid && <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">Informe um número inteiro maior ou igual a 1.</p>}
@@ -165,7 +165,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         type="button"
                         onClick={() => setConfirmClearHistory(true)}
                         disabled={recentFilesCount === 0}
-                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                       >
                         <Trash2 size={15} />
                         Limpar histórico
@@ -185,7 +185,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                               clearRecentFiles();
                               setConfirmClearHistory(false);
                             }}
-                            className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+                            className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
                           >
                             Sim, limpar
                           </button>
@@ -204,8 +204,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               <label htmlFor="downloadDir" className="text-sm font-medium text-gray-900 dark:text-gray-100">Pasta padrão de downloads</label>
               <p className="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Local usado para salvar XMLs e PDFs exportados.</p>
               <div className="mt-3 flex gap-2">
-                <input id="downloadDir" type="text" value={downloadDirValue} onChange={(e) => setDownloadDirValue(e.target.value)} placeholder="Pasta de Downloads do sistema" className="min-w-0 flex-1 truncate rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
-                <button type="button" onClick={handlePickFolder} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"><FolderOpen size={16} /><span className="hidden sm:inline">Escolher</span></button>
+                <input id="downloadDir" type="text" value={downloadDirValue} onChange={(e) => setDownloadDirValue(e.target.value)} placeholder="Pasta de Downloads do sistema" className="min-w-0 flex-1 truncate rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
+                <button type="button" onClick={handlePickFolder} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"><FolderOpen size={16} /><span className="hidden sm:inline">Escolher</span></button>
               </div>
             </div>
           </section>
@@ -237,7 +237,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     )}
                     {libraryError && <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{libraryError}</p>}
                   </div>
-                  <button type="button" onClick={handleOpenLibrary} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"><FolderOpen size={16} /><span className="hidden sm:inline">Abrir pasta</span></button>
+                  <button type="button" onClick={handleOpenLibrary} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"><FolderOpen size={16} /><span className="hidden sm:inline">Abrir pasta</span></button>
                 </div>
               </div>
             </section>
@@ -246,7 +246,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
         <footer className="flex items-center justify-end gap-2 border-t border-gray-200 bg-white px-5 py-3.5 dark:border-gray-800 dark:bg-gray-900">
           <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">Cancelar</button>
-          <button type="button" onClick={handleSave} disabled={!isValid} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-gray-900 ${showWarning ? "bg-amber-600 hover:bg-amber-700 focus-visible:ring-amber-500" : "bg-blue-600 hover:bg-blue-700 focus-visible:ring-blue-500"}`}>{showWarning ? "Confirmar alteração" : "Salvar alterações"}</button>
+          <button type="button" onClick={handleSave} disabled={!isValid} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-xs transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-gray-900 ${showWarning ? "bg-amber-600 hover:bg-amber-700 focus-visible:ring-amber-500" : "bg-blue-600 hover:bg-blue-700 focus-visible:ring-blue-500"}`}>{showWarning ? "Confirmar alteração" : "Salvar alterações"}</button>
         </footer>
       </div>
     </div>

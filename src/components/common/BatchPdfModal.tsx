@@ -91,7 +91,7 @@ export function BatchPdfModal({
             <button
               onClick={onClose}
               disabled={isRunning}
-              className="rounded p-1 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800"
+              className="rounded-sm p-1 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-800"
               title="Fechar"
             >
               <X size={16} />
@@ -109,7 +109,7 @@ export function BatchPdfModal({
                   readOnly
                   value={sourceDir}
                   placeholder="Selecione a pasta com os XMLs"
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {isScanningSource
@@ -124,7 +124,7 @@ export function BatchPdfModal({
                     checked={includeSubfolders}
                     onChange={(e) => onIncludeSubfoldersChange(e.target.checked)}
                     disabled={isRunning || isScanningSource}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                    className="rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
                   />
                   Incluir subpastas
                 </label>
@@ -133,7 +133,7 @@ export function BatchPdfModal({
                 type="button"
                 onClick={onPickSourceDir}
                 disabled={isRunning || isScanningSource}
-                className="inline-flex mt-[3px] items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                className="inline-flex mt-[3px] items-center justify-center gap-2 rounded-sm border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <FolderOpen size={16} />
                 Escolher pasta
@@ -151,7 +151,7 @@ export function BatchPdfModal({
                   onChange={(e) => onOutputDirChange(e.target.value)}
                   placeholder="Salvar via diálogo se vazio"
                   disabled={isRunning}
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 />
               </div>
               <div>
@@ -163,14 +163,14 @@ export function BatchPdfModal({
                   value={zipFileName}
                   onChange={(e) => onZipFileNameChange(e.target.value)}
                   disabled={isRunning}
-                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  className="w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 />
               </div>
               <button
                 type="button"
                 onClick={onPickOutputDir}
                 disabled={isRunning}
-                className="inline-flex items-center justify-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                className="inline-flex items-center justify-center gap-2 rounded-sm border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 <FolderOpen size={16} />
                 Saída
@@ -253,7 +253,7 @@ export function BatchPdfModal({
                 </div>
                 <div className="space-y-2 text-xs text-red-700 dark:text-red-300">
                   {visibleErrors.map((error) => (
-                    <div key={`${error.fileName}-${error.reason}`} className="rounded border border-red-200/80 px-2 py-1.5 dark:border-red-900/40">
+                    <div key={`${error.fileName}-${error.reason}`} className="rounded-sm border border-red-200/80 px-2 py-1.5 dark:border-red-900/40">
                       <p className="font-medium">{error.fileName}</p>
                       <p>{error.reason}</p>
                     </div>
@@ -276,7 +276,7 @@ export function BatchPdfModal({
                 type="button"
                 onClick={onClose}
                 disabled={isRunning}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                className="rounded-sm border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800"
               >
                 Fechar
               </button>
@@ -284,7 +284,7 @@ export function BatchPdfModal({
                 type="button"
                 onClick={() => void onRunBatch()}
                 disabled={!canRun && !(summary && !summary.outputPath && summary.generated > 0) || isRunning}
-                className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-sm bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isRunning ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
                 {isRunning ? "Gerando..." : primaryActionLabel}

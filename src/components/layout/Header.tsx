@@ -99,7 +99,7 @@ export function Header({
     <header className="h-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center px-3 gap-2 no-print">
       <button
         onClick={onToggleSidebar}
-        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         title={sidebarOpen ? "Fechar barra lateral" : "Abrir barra lateral"}
       >
         {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
@@ -109,7 +109,7 @@ export function Header({
 
       <button
         onClick={openFile}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Abrir XML (Ctrl+O)"
       >
         <FolderOpen size={16} />
@@ -119,7 +119,7 @@ export function Header({
       {nfeDownloadSupported && (
         <button
           onClick={() => setXmlDownloadOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
           title="Consultar e baixar NF-e na SEFAZ"
         >
           <CloudDownload size={16} />
@@ -129,7 +129,7 @@ export function Header({
 
       <button
         onClick={() => setChaveValidatorOpen(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Verificar formato e dígito verificador da chave"
       >
         <SearchCheck size={16} />
@@ -139,7 +139,7 @@ export function Header({
       {tauriRuntime && (
         <button
           onClick={batchPdf.openModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
           title="Gerar PDFs em lote"
         >
           <Files size={16} />
@@ -152,7 +152,7 @@ export function Header({
           <button
             onClick={exportPdf}
             disabled={exporting}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
             title="Exportar PDF"
           >
             <FileDown size={16} />
@@ -162,7 +162,7 @@ export function Header({
           <button
             onClick={printPdf}
             disabled={printing}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
             title="Imprimir"
           >
             <Printer size={16} />
@@ -221,7 +221,7 @@ export function Header({
 
       <button
         onClick={() => setSettingsOpen(true)}
-        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Configurações"
       >
         <Settings size={18} />
@@ -229,7 +229,7 @@ export function Header({
 
       <button
         onClick={toggleTheme}
-        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Alternar tema"
       >
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}

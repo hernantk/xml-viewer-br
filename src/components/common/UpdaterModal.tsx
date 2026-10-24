@@ -57,7 +57,7 @@ export function UpdaterModal(props: UpdaterModalProps) {
       role="dialog"
       aria-modal="true"
       aria-label={props.showSplash ? "Iniciando XML Viewer BR" : "Atualização do XML Viewer BR"}
-      className={`fixed inset-0 z-[100] flex flex-col items-center overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 no-print transition-opacity ease-out ${
+      className={`fixed inset-0 z-100 flex flex-col items-center overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 no-print transition-opacity ease-out ${
         leaving ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       style={{ transitionDuration: `${FADE_OUT_MS}ms` }}
@@ -138,7 +138,7 @@ function SplashStatus() {
         Verificando atualizações…
       </p>
       <div className="h-1 w-40 overflow-hidden rounded-full bg-gray-200/80 dark:bg-gray-800">
-        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 motion-safe:animate-indeterminate" />
+        <div className="h-full w-2/5 rounded-full bg-linear-to-r from-emerald-500 to-teal-400 motion-safe:animate-indeterminate" />
       </div>
     </div>
   );
@@ -175,7 +175,7 @@ function UpdatePanel({
                 <ArrowRight size={16} className="mb-1.5 text-gray-300 dark:text-gray-600" />
               </>
             )}
-            <span className="text-4xl font-bold tracking-tight tabular-nums bg-gradient-to-br from-emerald-600 to-teal-500 dark:from-emerald-300 dark:to-teal-400 bg-clip-text text-transparent">
+            <span className="text-4xl font-bold tracking-tight tabular-nums bg-linear-to-br from-emerald-600 to-teal-500 dark:from-emerald-300 dark:to-teal-400 bg-clip-text text-transparent">
               v{updateInfo.version}
             </span>
           </div>
@@ -186,7 +186,7 @@ function UpdatePanel({
         </p>
       </div>
 
-      <div className="rounded-b-2xl border-t border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/[0.02] px-6 py-5">
+      <div className="rounded-b-2xl border-t border-gray-100 dark:border-white/5 bg-gray-50/70 dark:bg-white/2 px-6 py-5">
         {(status === "available" || status === "downloading") && (
           <DownloadProgress
             progress={downloadProgress}
@@ -208,7 +208,7 @@ function UpdatePanel({
 }
 
 const primaryButton =
-  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-600/40 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900";
+  "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-600/40 active:scale-[0.99] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900";
 
 function DownloadProgress({
   progress,
@@ -242,13 +242,13 @@ function DownloadProgress({
       >
         {known ? (
           <div
-            className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-[width] duration-300 ease-out"
+            className="relative h-full overflow-hidden rounded-full bg-linear-to-r from-emerald-500 to-teal-400 transition-[width] duration-300 ease-out"
             style={{ width: `${progress}%` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent motion-safe:animate-shimmer" />
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/40 to-transparent motion-safe:animate-shimmer" />
           </div>
         ) : (
-          <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 motion-safe:animate-indeterminate" />
+          <div className="h-full w-2/5 rounded-full bg-linear-to-r from-emerald-500 to-teal-400 motion-safe:animate-indeterminate" />
         )}
       </div>
       <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400 tabular-nums">
@@ -319,7 +319,7 @@ function ErrorActions({
           <p className="text-sm font-semibold text-red-800 dark:text-red-300">
             Não foi possível baixar a atualização
           </p>
-          <p className="mt-0.5 break-words text-xs text-red-700/90 dark:text-red-300/80">
+          <p className="mt-0.5 wrap-break-word text-xs text-red-700/90 dark:text-red-300/80">
             {message ?? "Erro desconhecido."} Verifique sua conexão com a internet e tente de novo.
           </p>
         </div>
