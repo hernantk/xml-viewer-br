@@ -8,6 +8,7 @@ import type {
 } from "@/types/common";
 import { parseXml } from "@/services/xmlParser";
 import { persistToFile } from "@/utils/persistentStorage";
+import { deleteFromLibrary, storeXmlInLibrary } from "@/services/xmlLibrary";
 import { isTauriRuntime } from "@/utils/runtime";
 
 interface DocumentState {
@@ -206,6 +207,7 @@ function buildRecentFiles(
     edited,
     ...meta,
     pinned,
+    storedPath: existing?.storedPath,
   };
 
   let result = [newEntry, ...recentFiles.filter((entry) => entry.id !== fileId)];
@@ -277,6 +279,10 @@ function getRecentFiles(): RecentFileEntry[] {
                 : undefined,
             edited: entry.edited === true || undefined,
             pinned: entry.pinned === true || undefined,
+            storedPath:
+              typeof entry.storedPath === "string" && entry.storedPath
+                ? entry.storedPath
+                : undefined,
             chave: typeof entry.chave === "string" ? entry.chave : undefined,
             numero: typeof entry.numero === "string" ? entry.numero : undefined,
             cnpjEmitente: typeof entry.cnpjEmitente === "string" ? entry.cnpjEmitente : undefined,
@@ -340,10 +346,19 @@ function trimRecentFileCache(
   );
 }
 
+function collectStoredPaths(recentFiles: RecentFileEntry[]): Set<string> {
+  return new Set(
+    recentFiles
+      .map((entry) => entry.storedPath)
+      .filter((path): path is string => typeof path === "string"),
+  );
+}
+
 function persistRecentFiles(
   recentFiles: RecentFileEntry[],
   xmlCache: Record<string, string>,
 ) {
+  const previousStoredPaths = collectStoredPaths(getRecentFiles());
   const trimmedCache = trimRecentFileCache(recentFiles, xmlCache);
   const previousCache = localStorage.getItem(RECENT_CACHE_KEY);
   // Cache first: if quota is exceeded, metadata never points to missing content.
@@ -365,6 +380,100 @@ function persistRecentFiles(
 
   // Mirror to filesystem so data survives app updates
   void persistToFile();
+
+  // Entries that left the history take their library copy with them.
+  const nextStoredPaths = collectStoredPaths(recentFiles);
+  const orphans = [...previousStoredPaths].filter((path) => !nextStoredPaths.has(path));
+  if (orphans.length > 0) {
+    void deleteFromLibrary(orphans);
+  }
+}
+
+let libraryQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Copies an entry's XML into the library and points the entry at it.
+ * Content stays in the localStorage cache until the copy is written, so
+ * nothing is lost if the write fails or the app closes first.
+ */
+function syncEntryToLibrary(fileId: string, content: string): Promise<void> {
+  libraryQueue = libraryQueue.then(async () => {
+    const entry = useDocumentStore.getState().recentFiles.find((e) => e.id === fileId);
+    if (!entry) return;
+
+    const sharedWithOther =
+      entry.storedPath !== undefined &&
+      useDocumentStore
+        .getState()
+        .recentFiles.some((e) => e.id !== fileId && e.storedPath === entry.storedPath);
+
+    let storedPath: string | null;
+    try {
+      storedPath = await storeXmlInLibrary({
+        content,
+        documentType: entry.documentType,
+        label: entry.label,
+        chave: entry.chave,
+        existingPath: sharedWithOther ? undefined : entry.storedPath,
+      });
+    } catch {
+      return;
+    }
+    if (!storedPath) return;
+
+    const recentFiles = useDocumentStore.getState().recentFiles;
+    if (!recentFiles.some((e) => e.id === fileId)) {
+      // Removed while the copy was being written.
+      if (!collectStoredPaths(recentFiles).has(storedPath)) {
+        await deleteFromLibrary([storedPath]);
+      }
+      return;
+    }
+
+    const updated = recentFiles.map((e) =>
+      e.id === fileId ? { ...e, storedPath: storedPath ?? undefined } : e,
+    );
+    const xmlCache = getRecentFileCache();
+    if (xmlCache[fileId] === content) {
+      delete xmlCache[fileId];
+    }
+    try {
+      persistRecentFiles(updated, xmlCache);
+    } catch {
+      return;
+    }
+    useDocumentStore.setState({ recentFiles: updated });
+  });
+  return libraryQueue;
+}
+
+/**
+ * Moves everything the history still keeps in localStorage (or only
+ * references on disk) into the library. Runs once per startup.
+ */
+let migrationStarted = false;
+
+export async function migrateRecentFilesToLibrary(): Promise<void> {
+  if (!isTauriRuntime() || migrationStarted) return;
+  migrationStarted = true;
+
+  const pending = useDocumentStore
+    .getState()
+    .recentFiles.filter((entry) => !entry.storedPath);
+
+  for (const entry of pending) {
+    let content: string | undefined = getRecentFileCache()[entry.id];
+    if (content === undefined && canReopenRecentFile(entry.id)) {
+      try {
+        content = await readFilesystemFile(entry.id);
+      } catch {
+        continue;
+      }
+    }
+    if (content !== undefined) {
+      await syncEntryToLibrary(entry.id, content);
+    }
+  }
 }
 
 async function readFilesystemFile(path: string): Promise<string> {
@@ -392,10 +501,21 @@ async function resolveRecentFileContent(
         edited: entry?.edited === true,
       };
     }
+  }
 
-    if (source === "memory") {
-      throw new Error("Esse arquivo recente não está mais disponível no cache local.");
+  if (entry?.storedPath) {
+    try {
+      return {
+        content: await readFilesystemFile(entry.storedPath),
+        edited: entry.edited === true,
+      };
+    } catch {
+      // Library copy missing: fall back to the original file.
     }
+  }
+
+  if (source === "memory") {
+    throw new Error("Esse arquivo recente não está mais disponível no cache local.");
   }
 
   if (!canReopenRecentFile(fileId)) {
@@ -472,6 +592,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         validation: null,
         isEdited: edited,
       });
+
+      // Reopening from the library needs no new copy.
+      if (xmlContent !== undefined || !recentEntry?.storedPath) {
+        void syncEntryToLibrary(fileId, content);
+      }
     } catch (e) {
       set({
         loading: false,
@@ -506,6 +631,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       validation: null,
       isEdited: edited,
     });
+    void syncEntryToLibrary(filePath, xml);
   },
 
   setEdited: (edited) => {
@@ -524,6 +650,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
       persistRecentFiles(updated, xmlCache);
       set({ isEdited: edited, recentFiles: updated });
+      if (currentXml) {
+        void syncEntryToLibrary(filePath, currentXml);
+      }
     } else {
       set({ isEdited: edited });
     }
@@ -678,6 +807,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     let lastFilePath: string | null = null;
     let recentFiles = get().recentFiles;
     const xmlCache = { ...getRecentFileCache() };
+    const loadedContents = new Map<string, string>();
 
     for (const file of files) {
       try {
@@ -696,6 +826,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         } else {
           delete xmlCache[file.id];
         }
+        loadedContents.set(file.id, file.content);
         lastDoc = doc;
         lastXml = file.content;
         lastFilePath = file.id;
@@ -725,6 +856,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       validation: null,
       isEdited: false,
     });
+
+    for (const [id, content] of loadedContents) {
+      void syncEntryToLibrary(id, content);
+    }
 
     return { loaded, skipped, limitIncreased, newLimit: currentMax };
   },

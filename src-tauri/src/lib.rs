@@ -105,6 +105,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::library::library_store_xml,
+            commands::library::library_delete_xml,
             commands::parse::parse_document,
             commands::parse::read_file,
             commands::parse::take_pending_open_paths,

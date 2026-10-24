@@ -33,6 +33,7 @@ type PersistedData = Partial<Record<PersistedKey, string>>;
 let appDataDir: string | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
 
+/** App data directory, always ending with a path separator. */
 async function getStoragePath(): Promise<string | null> {
   if (!isTauriRuntime()) return null;
 
@@ -41,20 +42,39 @@ async function getStoragePath(): Promise<string | null> {
   try {
     const { appDataDir: getAppDataDir } = await import("@tauri-apps/api/path");
     const dir = await getAppDataDir();
-    appDataDir = dir;
-    return dir;
+    const separator = dir.includes("\\") ? "\\" : "/";
+    appDataDir = /[\\/]$/.test(dir) ? dir : `${dir}${separator}`;
+    return appDataDir;
   } catch {
     return null;
   }
+}
+
+/**
+ * Older versions concatenated the file name without a separator, which
+ * wrote `<...>/com.xmlviewer.brapp-state.json` beside the app folder.
+ */
+function legacyStoragePath(dir: string): string {
+  return `${dir.replace(/[\\/]+$/, "")}${STORAGE_FILENAME}`;
 }
 
 async function readStorageFile(): Promise<PersistedData | null> {
   const dir = await getStoragePath();
   if (!dir) return null;
 
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  let raw: string;
   try {
-    const { readTextFile } = await import("@tauri-apps/plugin-fs");
-    const raw = await readTextFile(`${dir}${STORAGE_FILENAME}`);
+    raw = await readTextFile(`${dir}${STORAGE_FILENAME}`);
+  } catch {
+    try {
+      raw = await readTextFile(legacyStoragePath(dir));
+    } catch {
+      return null;
+    }
+  }
+
+  try {
     const parsed: unknown = JSON.parse(raw);
     if (parsed && typeof parsed === "object") {
       const data: PersistedData = {};
@@ -67,7 +87,7 @@ async function readStorageFile(): Promise<PersistedData | null> {
       return data;
     }
   } catch {
-    // File doesn't exist yet or is corrupted — that's fine.
+    // Corrupted file — that's fine.
   }
   return null;
 }

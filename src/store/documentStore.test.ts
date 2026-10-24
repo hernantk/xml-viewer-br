@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  invoke: vi.fn<() => Promise<string>>(),
+  invoke: vi.fn<(cmd: string, args?: Record<string, unknown>) => Promise<string>>(),
   persistToFile: vi.fn(async () => undefined),
 }));
 
@@ -169,5 +169,75 @@ describe("documentStore recent file cache", () => {
     } finally {
       setItem.mockRestore();
     }
+  });
+
+  it("copia imports para a biblioteca e tira o conteúdo do cache", async () => {
+    const memoryId = "memory:upload.xml:1";
+    const storedPath = "C:/AppData/xmls/outros/upload.xml";
+    mocks.invoke.mockImplementation(async (cmd) =>
+      cmd === "library_store_xml" ? storedPath : "",
+    );
+    const useDocumentStore = await importStore();
+
+    await useDocumentStore.getState().loadMultipleFiles([{ id: memoryId, content: STALE_XML }]);
+    await vi.waitFor(() =>
+      expect(useDocumentStore.getState().recentFiles[0]?.storedPath).toBe(storedPath),
+    );
+
+    expect(mocks.invoke).toHaveBeenCalledWith("library_store_xml", {
+      content: STALE_XML,
+      category: "outros",
+      fileName: "upload.xml",
+      existingPath: null,
+    });
+    expect(JSON.parse(localStorage.getItem("xmlviewer-recent-cache") ?? "{}")).toEqual({});
+  });
+
+  it("lê da biblioteca e apaga a cópia ao remover do histórico", async () => {
+    const storedPath = "C:/AppData/xmls/nfe/nota.xml";
+    localStorage.setItem(
+      "xmlviewer-recent",
+      JSON.stringify([
+        { id: FILE_PATH, label: "nota.xml", source: "filesystem", lastOpenedAt: 1, storedPath },
+      ]),
+    );
+    mocks.invoke.mockImplementation(async (cmd, args) =>
+      cmd === "read_file" && args?.path === storedPath ? FRESH_XML : "",
+    );
+
+    const store = await importStore();
+    await expect(store.getState().getRecentFileContent(FILE_PATH)).resolves.toEqual({
+      content: FRESH_XML,
+      edited: false,
+    });
+
+    store.getState().removeRecentFile(FILE_PATH);
+    await vi.waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith("library_delete_xml", { path: storedPath }),
+    );
+  });
+
+  it("migra o cache do localStorage para a biblioteca na inicialização", async () => {
+    const memoryId = "memory:antigo.xml:1";
+    const storedPath = "C:/AppData/xmls/outros/antigo.xml";
+    localStorage.setItem(
+      "xmlviewer-recent",
+      JSON.stringify([{ id: memoryId, label: "antigo.xml", source: "memory", lastOpenedAt: 1 }]),
+    );
+    localStorage.setItem("xmlviewer-recent-cache", JSON.stringify({ [memoryId]: STALE_XML }));
+    mocks.invoke.mockImplementation(async (cmd, args) => {
+      if (cmd === "library_store_xml") return storedPath;
+      if (cmd === "read_file" && args?.path === storedPath) return STALE_XML;
+      return "";
+    });
+
+    const { useDocumentStore, migrateRecentFilesToLibrary } = await import("./documentStore");
+    await migrateRecentFilesToLibrary();
+
+    expect(useDocumentStore.getState().recentFiles[0]?.storedPath).toBe(storedPath);
+    expect(JSON.parse(localStorage.getItem("xmlviewer-recent-cache") ?? "{}")).toEqual({});
+    await expect(
+      useDocumentStore.getState().getRecentFileContent(memoryId),
+    ).resolves.toEqual({ content: STALE_XML, edited: false });
   });
 });

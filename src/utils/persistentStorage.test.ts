@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   isTauriRuntime: vi.fn(() => true),
-  appDataDir: vi.fn(async () => "C:\\app-data\\"),
+  appDataDir: vi.fn(async () => "C:\\app-data"),
   mkdir: vi.fn(async () => undefined),
-  readTextFile: vi.fn<() => Promise<string>>(),
-  writeTextFile: vi.fn(async () => undefined),
+  readTextFile: vi.fn<(path: string) => Promise<string>>(),
+  writeTextFile: vi.fn(async (_path: string, _data: string) => undefined),
 }));
 
 vi.mock("@/utils/runtime", () => ({
@@ -126,5 +126,23 @@ describe("persistentStorage", () => {
 
     expect(localStorage.getItem("xmlviewer-theme")).toBe("dark");
     expect(mocks.writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it("grava dentro da pasta do app e lê o arquivo legado como fallback", async () => {
+    mocks.readTextFile.mockImplementation(async (path) => {
+      if (path === "C:\\app-dataapp-state.json") {
+        return JSON.stringify({ "xmlviewer-theme": "dark" });
+      }
+      throw new Error("não encontrado");
+    });
+
+    await restoreIfNeeded();
+
+    expect(mocks.readTextFile).toHaveBeenCalledWith("C:\\app-data\\app-state.json");
+    expect(localStorage.getItem("xmlviewer-theme")).toBe("dark");
+    expect(mocks.writeTextFile).toHaveBeenCalledWith(
+      "C:\\app-data\\app-state.json",
+      expect.any(String),
+    );
   });
 });

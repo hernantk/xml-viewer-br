@@ -7,7 +7,7 @@ import { FileDropZone } from "../common/FileDropZone";
 import { UpdaterModal } from "../common/UpdaterModal";
 import { useAssociatedFileOpen } from "@/hooks/useAssociatedFileOpen";
 import { useUpdater } from "@/hooks/useUpdater";
-import { useDocumentStore } from "@/store/documentStore";
+import { migrateRecentFilesToLibrary, useDocumentStore } from "@/store/documentStore";
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -23,9 +23,13 @@ export function AppShell() {
     void initializeDownloadDir();
   }, [initializeDownloadDir]);
 
+  useEffect(() => {
+    void migrateRecentFilesToLibrary();
+  }, []);
+
   return (
     <FileDropZone>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden" inert={updater.showSplash || updater.blocking}>
         {sidebarOpen && <Sidebar />}
         <div className="flex flex-col flex-1 min-w-0">
           <Header
@@ -46,14 +50,17 @@ export function AppShell() {
         </div>
       </div>
       <UpdaterModal
-        visible={updater.modalVisible}
+        showSplash={updater.showSplash}
+        blocking={updater.blocking}
         status={updater.status}
         updateInfo={updater.updateInfo}
         downloadProgress={updater.downloadProgress}
+        downloadedBytes={updater.downloadedBytes}
+        totalBytes={updater.totalBytes}
         errorMessage={updater.errorMessage}
         onDownload={updater.downloadAndInstall}
         onRelaunch={updater.relaunch}
-        onDismiss={updater.dismiss}
+        onContinueWithoutUpdate={updater.continueWithoutUpdate}
       />
       {nfeDownloadNotice && (
         <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg no-print">

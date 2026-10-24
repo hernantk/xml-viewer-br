@@ -8,6 +8,8 @@ export interface RecentFileEntry {
   documentType?: DocumentType;
   edited?: boolean;
   pinned?: boolean;
+  /** Cópia do XML na biblioteca local ($APPDATA/xmls/<categoria>/). */
+  storedPath?: string;
   // Metadados para busca
   chave?: string;
   numero?: string;
