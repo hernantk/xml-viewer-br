@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<relatorio gerado="2026-06-19">
+  <titulo>Arquivo XML genérico de exemplo</titulo>
+  <itens>
+    <item codigo="1">Primeiro item</item>
+    <item codigo="2">Segundo item</item>
+  </itens>
+</relatorio>

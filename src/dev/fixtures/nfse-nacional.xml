@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS41069022123456780001900000000000000012345678901">
+    <xLocEmi>CURITIBA</xLocEmi>
+    <nNFSe>88</nNFSe>
+    <dhProc>2026-06-18T14:00:00-03:00</dhProc>
+    <emit><CNPJ>12345678000190</CNPJ><xNome>EMPRESA EXEMPLO SERVICOS LTDA</xNome><enderNac><xLgr>RUA DAS FLORES</xLgr><nro>100</nro><xBairro>CENTRO</xBairro><cMun>4106902</cMun><UF>PR</UF><CEP>80000000</CEP></enderNac></emit>
+    <valores><vBC>900.00</vBC><vISSQN>18.00</vISSQN><vLiq>900.00</vLiq></valores>
+  </infNFSe>
+</NFSe>

@@ -8,6 +8,11 @@ async function bootstrap() {
     new URLSearchParams(window.location.search).get("pdfRenderer") === "1";
   await restoreIfNeeded({ writeBack: !isPdfRenderer });
 
+  if (import.meta.env.DEV && import.meta.env.VITE_SEED_LEGACY === "1" && !isPdfRenderer) {
+    const { seedLegacyStorage } = await import("./dev/seedLegacyStorage");
+    console.info(`[dev] ${seedLegacyStorage()} XML(s) antigo(s) semeado(s) no localStorage`);
+  }
+
   const savedTheme = localStorage.getItem("xmlviewer-theme");
   document.documentElement.classList.toggle("dark", savedTheme === "dark");
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompNfse xmlns="http://www.abrasf.org.br/nfse.xsd">
+  <Nfse>
+    <InfNfse>
+      <Numero>2026000123</Numero>
+      <CodigoVerificacao>A1B2C3D4</CodigoVerificacao>
+      <DataEmissao>2026-06-17T09:15:00</DataEmissao>
+      <ValoresNfse><BaseCalculo>1500.00</BaseCalculo><Aliquota>2.00</Aliquota><ValorIss>30.00</ValorIss><ValorLiquidoNfse>1500.00</ValorLiquidoNfse></ValoresNfse>
+      <PrestadorServico>
+        <IdentificacaoPrestador><Cnpj>12345678000190</Cnpj><InscricaoMunicipal>123456</InscricaoMunicipal></IdentificacaoPrestador>
+        <RazaoSocial>EMPRESA EXEMPLO SERVICOS LTDA</RazaoSocial>
+      </PrestadorServico>
+      <TomadorServico>
+        <IdentificacaoTomador><CpfCnpj><Cnpj>98765432000110</Cnpj></CpfCnpj></IdentificacaoTomador>
+        <RazaoSocial>CLIENTE DE TESTE INDUSTRIA SA</RazaoSocial>
+      </TomadorServico>
+    </InfNfse>
+  </Nfse>
+</CompNfse>
