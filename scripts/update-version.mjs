@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const args = process.argv.slice(2);
@@ -70,8 +70,46 @@ const updates = [
   [paths.tauriConfig, tauriConfigUpdated],
 ];
 
+const originals = new Map([
+  [paths.packageJson, packageText],
+  [paths.packageLock, packageLockText],
+  [paths.cargoToml, cargoTomlText],
+  [paths.cargoLock, cargoLockText],
+  [paths.tauriConfig, tauriConfigText],
+]);
+
+/**
+ * Writes every file to a sibling `.tmp` first and only then swaps them in,
+ * one at a time. A file locked by `tauri dev` makes the swap fail; the
+ * files already swapped are put back, so nothing is left half-written.
+ */
+async function writeAllOrNothing(files) {
+  const tmpPath = (path) => `${path}.version-tmp`;
+  try {
+    for (const [path, contents] of files) await writeFile(tmpPath(path), contents);
+  } catch (error) {
+    await Promise.all(files.map(([path]) => rm(tmpPath(path), { force: true })));
+    throw error;
+  }
+
+  const swapped = [];
+  try {
+    for (const [path] of files) {
+      await rename(tmpPath(path), path);
+      swapped.push(path);
+    }
+  } catch (error) {
+    for (const path of swapped) await writeFile(path, originals.get(path));
+    await Promise.all(files.map(([path]) => rm(tmpPath(path), { force: true })));
+    throw new Error(
+      `Não foi possível gravar ${error.path ?? "um dos arquivos"} (está aberto por outro processo, como o tauri dev?). Nenhum arquivo foi alterado.`,
+      { cause: error },
+    );
+  }
+}
+
 if (!dryRun) {
-  await Promise.all(updates.map(([path, contents]) => writeFile(path, contents)));
+  await writeAllOrNothing(updates);
 }
 
 console.log(`${dryRun ? "Simulação" : "Versão atualizada"}: ${previousVersion} -> ${version}`);

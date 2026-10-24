@@ -26,3 +26,5 @@ Thumbs.db
 .claude/
 ~/.tauri/xmlviewer-br.key
 target/
+# TypeScript incremental build
+*.tsbuildinfo

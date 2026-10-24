@@ -70,3 +70,33 @@ export async function deleteFromLibrary(paths: Iterable<string>): Promise<void> 
     }
   }
 }
+
+export const LIBRARY_CATEGORY_LABELS: Record<LibraryCategory, string> = {
+  nfe: "NF-e",
+  cte: "CT-e",
+  nfse: "NFS-e",
+  "nfse-nacional": "NFS-e Nacional",
+  outros: "Outros",
+};
+
+export interface LibraryStats {
+  path: string;
+  files: number;
+  bytes: number;
+  categories: { category: LibraryCategory; files: number; bytes: number }[];
+}
+
+/** Returns null outside the desktop app. */
+export async function getLibraryStats(): Promise<LibraryStats | null> {
+  if (!isTauriRuntime()) return null;
+
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<LibraryStats>("library_stats");
+}
+
+export async function openLibraryFolder(): Promise<void> {
+  if (!isTauriRuntime()) return;
+
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("library_open_folder");
+}

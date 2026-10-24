@@ -107,6 +107,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::library::library_store_xml,
             commands::library::library_delete_xml,
+            commands::library::library_stats,
+            commands::library::library_open_folder,
             commands::document_cache::read_cached_document,
             commands::document_cache::remove_cached_document,
             commands::document_cache::clear_document_cache,

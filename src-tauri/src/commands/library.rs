@@ -5,7 +5,9 @@
 
 use std::path::{Path, PathBuf};
 
+use serde::Serialize;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::error::AppError;
 
@@ -130,9 +132,82 @@ pub fn library_delete_xml(app: AppHandle, path: String) -> Result<(), AppError> 
     Ok(())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryStats {
+    category: &'static str,
+    files: u64,
+    bytes: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryStats {
+    path: String,
+    files: u64,
+    bytes: u64,
+    categories: Vec<CategoryStats>,
+}
+
+fn category_stats(dir: &Path, category: &'static str) -> CategoryStats {
+    let mut stats = CategoryStats { category, files: 0, bytes: 0 };
+    if let Ok(entries) = std::fs::read_dir(dir.join(category)) {
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_file() {
+                    stats.files += 1;
+                    stats.bytes += meta.len();
+                }
+            }
+        }
+    }
+    stats
+}
+
+/// Where the library lives and how much space each category takes.
+#[tauri::command]
+pub fn library_stats(app: AppHandle) -> Result<LibraryStats, AppError> {
+    let root = library_root(&app)?;
+    let categories: Vec<CategoryStats> = CATEGORIES
+        .iter()
+        .map(|category| category_stats(&root, category))
+        .collect();
+    Ok(LibraryStats {
+        path: root.to_string_lossy().into_owned(),
+        files: categories.iter().map(|c| c.files).sum(),
+        bytes: categories.iter().map(|c| c.bytes).sum(),
+        categories,
+    })
+}
+
+/// Opens the library folder in the system file manager.
+#[tauri::command]
+pub fn library_open_folder(app: AppHandle) -> Result<(), AppError> {
+    let root = library_root(&app)?;
+    std::fs::create_dir_all(&root)?;
+    app.opener()
+        .open_path(root.to_string_lossy(), None::<&str>)
+        .map_err(|e| AppError::Other(e.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn counts_files_per_category() {
+        let dir = std::env::temp_dir().join(format!("xmlviewer-stats-test-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("nfe")).unwrap();
+        std::fs::write(dir.join("nfe").join("a.xml"), "12345").unwrap();
+        std::fs::write(dir.join("nfe").join("b.xml"), "123").unwrap();
+
+        let nfe = category_stats(&dir, "nfe");
+        let cte = category_stats(&dir, "cte");
+        assert_eq!((nfe.files, nfe.bytes), (2, 8));
+        assert_eq!((cte.files, cte.bytes), (0, 0));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn sanitizes_names() {

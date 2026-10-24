@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, Building2, FileClock, FolderOpen, Landmark, Settings2, Trash2, X } from "lucide-react";
+import { AlertTriangle, Building2, FileClock, FolderOpen, Landmark, Library, Settings2, Trash2, X } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
+import {
+  getLibraryStats,
+  LIBRARY_CATEGORY_LABELS,
+  openLibraryFolder,
+  type LibraryStats,
+} from "@/services/xmlLibrary";
+import { formatBytes } from "@/utils/formatBytes";
+import { isTauriRuntime } from "@/utils/runtime";
 
 interface SettingsModalProps { open: boolean; onClose: () => void }
 interface ToggleProps {
@@ -39,6 +47,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [taxesValue, setTaxesValue] = useState(showIbsCbs);
   const [showWarning, setShowWarning] = useState(false);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +68,17 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       } catch { /* browser */ }
     })();
   }, [open, maxRecentFiles, downloadDir, groupByEmitente, showIbsCbs]);
+
+  // Recount whenever the history changes, since removals delete library copies.
+  useEffect(() => {
+    if (!open || !isTauriRuntime()) return;
+    let cancelled = false;
+    setLibraryError(null);
+    getLibraryStats()
+      .then((stats) => { if (!cancelled) setLibraryStats(stats); })
+      .catch(() => { if (!cancelled) setLibraryError("Não foi possível ler a biblioteca."); });
+    return () => { cancelled = true; };
+  }, [open, recentFilesCount]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,6 +101,14 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     setGroupByEmitente(groupValue);
     setShowIbsCbs(taxesValue);
     onClose();
+  };
+
+  const handleOpenLibrary = async () => {
+    try {
+      await openLibraryFolder();
+    } catch {
+      setLibraryError("Não foi possível abrir a pasta da biblioteca.");
+    }
   };
 
   const handlePickFolder = async () => {
@@ -180,6 +209,39 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               </div>
             </div>
           </section>
+          {isTauriRuntime() && (
+            <section aria-labelledby="library-settings-title">
+              <h3 id="library-settings-title" className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Biblioteca de XMLs</h3>
+              <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"><Library size={17} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {libraryStats
+                        ? `${libraryStats.files} ${libraryStats.files === 1 ? "arquivo" : "arquivos"} · ${formatBytes(libraryStats.bytes)}`
+                        : "Calculando…"}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">Cópias dos XMLs importados, separadas por tipo. Saem daqui quando a nota sai do histórico.</p>
+                    {libraryStats && (
+                      <ul className="mt-3 flex flex-wrap gap-1.5">
+                        {libraryStats.categories.filter((c) => c.files > 0).map((c) => (
+                          <li key={c.category} className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                            <span className="font-medium">{LIBRARY_CATEGORY_LABELS[c.category]}</span>{" "}
+                            <span className="text-gray-500 dark:text-gray-400">{c.files} · {formatBytes(c.bytes)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {libraryStats && (
+                      <p className="mt-2 truncate font-mono text-[11px] text-gray-400 dark:text-gray-500" title={libraryStats.path}>{libraryStats.path}</p>
+                    )}
+                    {libraryError && <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{libraryError}</p>}
+                  </div>
+                  <button type="button" onClick={handleOpenLibrary} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"><FolderOpen size={16} /><span className="hidden sm:inline">Abrir pasta</span></button>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-gray-200 bg-white px-5 py-3.5 dark:border-gray-800 dark:bg-gray-900">
